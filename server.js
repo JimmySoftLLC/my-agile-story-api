@@ -20,7 +20,7 @@ if (process.env.NODE_ENVIRONMENT === 'production') {
         console.log('ERROR:', err.message);
     });
 } else {
-    var db = mongoose.connect('mongodb://localhost/my-agile-story-api', {
+    const db = mongoose.connect('mongodb://localhost/my-agile-story-api', {
         useNewUrlParser: true,
         useCreateIndex: true
     }).then(() => {
@@ -34,7 +34,7 @@ var Developer = require('./model/developer');
 var Project = require('./model/project');
 var UserStory = require('./model/user-story');
 
-//Allow all requests from all domains & localhost
+//Allow all reqs from all domains & localhost
 app.all('/*', function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "X-Requested-With, Content-Type, Accept");
@@ -45,26 +45,26 @@ app.all('/*', function(req, res, next) {
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
 
-app.post('/developer', function (request, response) {
+app.post('/developer', function (req, res) {
     //first check if develop exists if so return and error
     Developer.findOne({
-        userName: request.body.userName.toLowerCase()
+        userName: req.body.userName.toLowerCase()
     }, function (err, developerInDatabase) {
         if (err) {           
-            response.status(500).send({error: "Could not create developer: " + request.body.userName.toLowerCase() + " err: " + err.message});
+            res.status(500).send({error: "Could not create developer, " + err.message});
         } else {
             if (developerInDatabase !== null) {                     
-                response.status(500).send({error: "Could not create developer: " + request.body.userName.toLowerCase() + " already exists."});
+                res.status(500).send({error: "Could not create developer, already exists."});
             } else {
                 //developer doesn't exist so create a new one
                 var developer = new Developer();
-                developer.userName = request.body.userName.toLowerCase();
-                developer.userPassword = request.body.userPassword;
+                developer.userName = req.body.userName.toLowerCase();
+                developer.userPassword = req.body.userPassword;
                 developer.save(function (err, savedDeveloper) {
                     if (err) {
-                        response.status(500).send({error: "Could not create developer: " + request.body.userName.toLowerCase() + " err: " + err.message});
+                        res.status(500).send({error: "Could not create developer, " + err.message});
                     } else {
-                        response.send(savedDeveloper);
+                        res.send(savedDeveloper);
                     }
                 });
             }
@@ -72,58 +72,97 @@ app.post('/developer', function (request, response) {
     });
 });
 
-app.copy('/developer', function (request, response) {
-    //first check if developer exists if so return an error
-    Developer.findOne({userName: request.body.userNameNew.toLowerCase() }, function (err, developer) {
-        if (err) {          
-            response.status(500).send({error: "Could not create developer: " + request.body.userName.toLowerCase() + " err: " + err.message});
-        } else {
-            if (developer !== null) {                   
-                response.status(500).send({error: "Could not copy developer: " + request.body.userNameNew.toLowerCase() + " aleady exists."});
-            } else {
-                //developer doesn't exist so create a new one
-                Developer.findOne({userName: request.body.userName.toLowerCase(),userPassword: request.body.userPassword}, function (err, developerToCopy) {
-                    if (err) {
-                        response.status(500).send({error: "Could not create developer: " + request.body.userNameNew.toLowerCase() + " err: " + err.message});
-                    } else {
-                        if (developerToCopy === null) {
-                            response.status(500).send({error: "Could not find developer: " + request.body.userName.toLowerCase() + " does not exist."});
-                        } else {
-                            developerToCopy._id = mongoose.Types.ObjectId();
-                            developerToCopy.isNew = true;
-                            developerToCopy.userName = request.body.userNameNew.toLowerCase() 
-                            developerToCopy.userPassword = request.body.userPasswordNew
-                            developerToCopy.save(function (err, newDeveloper) {
-                                if (err) {
-                                    response.status(500).send({error: "Could not create developer: " + request.body.userName.toLowerCase() + " err: " + err.message});
-                                } else {
-                                    response.send(newDeveloper);
-                                }
-                            });
-                        }
-                    }
-                });
-            }
-        }
-    });
-});
-
-app.get('/developer', function(request, response) {
-    Developer.findOne({userName: request.body.userName.toLowerCase(), userPassword: request.body.userPassword}, function(err, savedDeveloper) {
+app.get('/developer', function(req, res) {
+    Developer.findOne({_id: req.body.developerId}, function(err, developer) {
        if (err) {
-           response.status(500).send({error: "Could not create developer: " + request.body.userName.toLowerCase() + " err: " + err.message});
+           res.status(500).send({error: "Could not get developer, " + err.message});
        } else {
-           response.send(savedDeveloper);
+            if (developer === null) {                     
+                res.status(500).send({error: "Could not get developer, not found"});
+            } else {
+                res.send(developer);
+            }
        }
     });
 });
 
-app.delete('/developer', function(request, response) {
-    Developer.findOneAndRemove({userName: request.body.userName.toLowerCase(), userPassword: request.body.userPassword}, function(err, savedDeveloper) {
+app.delete('/developer', function(req, res) {
+    Developer.findOneAndDelete({_id: req.body.developerId}, function(err, developer) {
        if (err) {
-           response.status(500).send({error: "Could not create developer: " + request.body.userName.toLowerCase() + " err: " + err.message});
+           res.status(500).send({error: "Could not delete developer, " + err.message});
        } else {
-           response.send(savedDeveloper);
+            if (developer === null) {                     
+                res.status(500).send({error: "Could not delete developer, not found"});
+            } else {
+                res.status(200).send("Success");
+            }
+       }
+    });
+});
+
+app.post('/developer/project', function(req, res) {
+    Developer.findOne({_id: req.body.developerId}, function(err, developer) {
+       if (err) {
+           res.status(500).send({error: "Could not create project, " + err.message});
+       } else {
+            if (developer === null) {                     
+                res.status(500).send({error: "Could not create project, developer not found"});
+            } else {           
+                var project = new Project();
+                project.name = req.body.projectName
+                project.save(function (err, savedProject) {
+                    if (err) {
+                        res.status(500).send({error: "Could not create project, " + err.message});
+                    } else {
+                        developer.userName = req.body.userName.toLowerCase();
+                        developer.projectIds.push(savedProject._id);
+                        developer.save(function (err, savedDeveloper) {
+                            if (err) {
+                                res.status(500).send({error: "Could not save developer, " + err.message});
+                            } else {
+                                res.send(savedDeveloper);
+                            }
+                        });  
+                    }
+                });          
+            }
+       }
+    });
+});
+
+app.get('/project', function(req, res) {
+    Project.findOne({_id: req.body.projectId}, function(err, project) {
+       if (err) {
+           res.status(500).send({error: "Could not get project, " + err.message});
+       } else {
+            if (project === null) {                     
+                res.status(500).send({error: "Could not get project, not found"});
+            } else {
+                res.send(project);
+            }
+       }
+    });
+});
+
+app.delete('/developer/project', function(req, res) {
+    Project.findOneAndDelete({_id: req.body.projectId}, function(err, project) {
+       if (err) {
+           res.status(500).send({error: "Could not delete project, " + err.message});
+       } else {
+            if (project === null) {                     
+                res.status(500).send({error: "Could not delete project, not found"});
+            } else {  
+                Developer.findByIdAndUpdate(req.body.developerId,
+                    {$pull: {projectIds: mongoose.Types.ObjectId(req.body.projectId)}},
+                    {safe: true, upsert: true},
+                    function(err, doc) {
+                        if(err){
+                            res.status(500).send({error: "Could not remove project from developer"});
+                        }else{
+                            res.status(200).send("Success");
+                        }
+                    });
+            }
        }
     });
 });
