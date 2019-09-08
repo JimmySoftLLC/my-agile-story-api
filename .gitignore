@@ -30,3 +30,4 @@ someOtherfoler/
 # files #
 ###################
 .env
+.DS_Store
