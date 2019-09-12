@@ -35,6 +35,8 @@ app.set("view engine", "ejs");
 // ==================================================================
 
 if (process.env.NODE_ENVIRONMENT === 'production') {
+    console.log(process.env.MONGO_USER);
+    console.log(process.env.MONGO_PASWORD);
     const db = mongoose.connect('mongodb+srv://' + process.env.MONGO_USER + ':' + process.env.MONGO_PASWORD + '@cluster0-yxay5.mongodb.net/test?retryWrites=true&w=majority', {
         useNewUrlParser: true,
         useCreateIndex: true
