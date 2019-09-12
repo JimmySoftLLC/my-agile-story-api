@@ -59,56 +59,44 @@ var Project = require('./model/project');
 var UserStory = require('./model/user-story');
 
 // ==================================================================
-// ROUTES
+// POST ROUTES
 // ==================================================================
-
-app.get('/', function (req, res) {
-    res.render('home.ejs', {statusMessage: "Welcome"} )
-});
-
-app.get('/heat-transfer', function (req, res) {
-    res.render('heat-transfer.ejs', )
-});
-
-app.get('/heat-up', function (req, res) {
-    res.render('heat-up.ejs', )
-});
-
-app.get('/process-load', function (req, res) {
-    res.render('process-load.ejs', )
-});
 
 app.post('/developer', function (req, res) {
     //first check if develop exists if so return and error
     Developer.findOne({
-        userName: req.body.userName.toLowerCase()
+        email: req.body.email.toLowerCase()
     }, function (err, developerInDatabase) {
         if (err) {
-            res.render('home.ejs', {statusMessage: "Could not create developer, " + err.message} )
-//            res.status(500).send({
-//                error: "Could not create developer, " + err.message
-//            });
+            // res.render('home.ejs', {statusMessage: "Could not create developer, " + err.message} )
+           res.status(500).send({
+               error: "Could not create developer, " + err.message
+           });
         } else {
             if (developerInDatabase !== null) {
-                res.render('home.ejs', {statusMessage: "Could not create developer, already exists."})
-//                res.status(500).send({
-//                    error: "Could not create developer, already exists."
-//                });
+                // res.render('home.ejs', {statusMessage: "Could not create developer, already exists."})
+               res.status(500).send({
+                   error: "Could not create developer, already exists."
+               });
             } else {
                 //developer doesn't exist so create a new one
                 var developer = new Developer();
-                developer.userName = req.body.userName.toLowerCase();
-                developer.userPassword = req.body.userPassword;
+                developer.email = req.body.email.toLowerCase();
+                developer.password = req.body.password;
+                developer.firstName = req.body.firstName;
+                developer.lastName = req.body.lastName;
+                developer.bio = req.body.bio;
+                developer.role = "admin" // TODO add req.body.role;
                 developer.save(function (err, savedDeveloper) {
                     if (err) {
-                        res.render('home.ejs', {statusMessage: "Could not create developer, " + err.message} )
-//                        res.status(500).send({
-//                            error: "Could not create developer, " + err.message
-//                        });
+                        // res.render('home.ejs', {statusMessage: "Could not create developer, " + err.message} )
+                       res.status(500).send({
+                           error: "Could not create developer, " + err.message
+                       });
                         
                     } else {
-                        res.render('home.ejs', {statusMessage: "Developer created sucessfully!"} )
-                        //res.send(savedDeveloper);
+                        // res.render('home.ejs', {statusMessage: "Developer created sucessfully!"} )
+                       res.status(200).send(savedDeveloper);
                     }
                 });
             }
@@ -116,66 +104,7 @@ app.post('/developer', function (req, res) {
     });
 });
 
-app.get('/developer', function (req, res) {
-    Developer.findOne({
-        _id: req.body.developerId
-    }, function (err, developer) {
-        if (err) {
-            res.status(500).send({
-                error: "Could not get developer, " + err.message
-            });
-        } else {
-            if (developer === null) {
-                res.status(500).send({
-                    error: "Could not get developer, not found"
-                });
-            } else {
-                res.send(developer);
-            }
-        }
-    });
-});
 
-app.get('/developer/html', function (req, res) {
-    Developer.findOne({
-        _id: '5d62e7ced897a2787634bd4d' //req.body.developerId
-    }, function (err, developer) {
-        if (err) {
-            res.status(500).send({
-                error: "Could not get developer, " + err.message
-            });
-        } else {
-            if (developer === null) {
-                res.status(500).send({
-                    error: "Could not get developer, not found"
-                });
-            } else {
-                console.log (developer);
-                res.render('developer', {developer: developer});
-            }
-        }
-    });
-});
-
-app.delete('/developer', function (req, res) {
-    Developer.findOneAndDelete({
-        _id: req.body.developerId
-    }, function (err, developer) {
-        if (err) {
-            res.status(500).send({
-                error: "Could not delete developer, " + err.message
-            });
-        } else {
-            if (developer === null) {
-                res.status(500).send({
-                    error: "Could not delete developer, not found"
-                });
-            } else {
-                res.status(200).send("Success");
-            }
-        }
-    });
-});
 
 app.post('/developer/project', function (req, res) {
     Developer.findOne({
@@ -192,14 +121,15 @@ app.post('/developer/project', function (req, res) {
                 });
             } else {
                 var project = new Project();
-                project.name = req.body.projectName
+                project.name = req.body.name;
+                project.description = req.body.description;
+                project.developerIds.push(developer._id);
                 project.save(function (err, savedProject) {
                     if (err) {
                         res.status(500).send({
                             error: "Could not create project, " + err.message
                         });
                     } else {
-                        developer.userName = req.body.userName.toLowerCase();
                         developer.projectIds.push(savedProject._id);
                         developer.save(function (err, savedDeveloper) {
                             if (err) {
@@ -207,7 +137,7 @@ app.post('/developer/project', function (req, res) {
                                     error: "Could not save developer, " + err.message
                                 });
                             } else {
-                                res.send(savedDeveloper);
+                                res.status(200).send(savedProject);
                             }
                         });
                     }
@@ -217,7 +147,142 @@ app.post('/developer/project', function (req, res) {
     });
 });
 
-app.get('/project', function (req, res) {
+app.post('/project/userStory', function (req, res) {
+    Project.findOne({
+        _id: req.body.projectId
+    }, function (err, project) {
+        if (err) {
+            res.status(500).send({
+                error: "Could not create user story, " + err.message
+            });
+        } else {
+            if (project === null) {
+                res.status(500).send({
+                    error: "Could not create user story, Project not found"
+                });
+            } else {
+                var userStory = new UserStory();
+                userStory.userStoryTitle = req.body.userStoryTitle;
+                userStory.userRole = req.body.userRole;
+                userStory.userWant = req.body.userWant;
+                userStory.userBenefit = req.body.userBenefit;
+                userStory.acceptanceCriteria = req.body.acceptanceCriteria;
+                userStory.conversation = req.body.conversation;
+                userStory.estimate = req.body.estimate;
+                userStory.phase = req.body.phase;
+                userStory.percentDone = req.body.percentDone;
+                userStory.projectId = req.body.projectId;
+                userStory.save(function (err, savedUserStory) {
+                    if (err) {
+                        res.status(500).send({
+                            error: "Could not create user story, " + err.message
+                        });
+                    } else {
+                        project.userStoryIds.push(savedUserStory._id);
+                        project.save(function (err, savedProject) {
+                            if (err) {
+                                res.status(500).send({
+                                    error: "Could not save project, " + err.message
+                                });
+                            } else {
+                                res.status(200).send(savedUserStory);
+                            }
+                        });
+                    }
+                });
+            }
+        }
+    });
+});
+
+app.post('/put/userStory', function (req, res) {
+    UserStory.findOne({
+        _id: req.body.userStoryId
+    }, function (err, userStory) {
+        if (err) {
+            res.status(500).send({
+                error: "Could not update user story, " + err.message
+            });
+        } else {
+            if (userStory === null) {
+                res.status(500).send({
+                    error: "Could not update user story, user not found"
+                });
+            } else {
+                if (err) {
+                    res.status(500).send({
+                        error: "Could not update user story, " + err.message
+                    });
+                } else {
+                    userStory.userStoryTitle = req.body.userStoryTitle;
+                    userStory.userRole = req.body.userRole;
+                    userStory.userWant = req.body.userWant;
+                    userStory.userBenefit = req.body.userBenefit;
+                    userStory.acceptanceCriteria = req.body.acceptanceCriteria;
+                    userStory.conversation = req.body.conversation;
+                    userStory.estimate = req.body.estimate;
+                    userStory.phase = req.body.phase;
+                    userStory.percentDone = req.body.percentDone;
+                    userStory.save(function (err, savedUserStory) {
+                        if (err) {
+                            res.status(500).send({
+                                error: "Could not save user story, " + err.message
+                            });
+                        } else {
+                            res.status(200).send(savedUserStory);
+                        }
+                    });
+                }
+            }
+        }
+    });
+});
+
+
+// ==================================================================
+// GET ROUTES some do not use HTTP GET inparticular for mongoose items, 
+// primarly for security (i.e. login), and the need to use body for 
+// complex JSON based search parameters.  These routes have the form /get/...
+// ==================================================================
+
+app.get('/', function (req, res) {
+    res.render('home.ejs',{statusMessage: ""})
+});
+
+app.get('/heat-transfer', function (req, res) {
+    res.render('heat-transfer.ejs', )
+});
+
+app.get('/heat-up', function (req, res) {
+    res.render('heat-up.ejs', )
+});
+
+app.get('/process-load', function (req, res) {
+    res.render('process-load.ejs', )
+});
+
+app.post('/get/developer', function (req, res) {
+    Developer.findOne({
+        email: req.body.email,
+        password: req.body.password
+    }, function (err, developer) {
+        if (err) {
+            res.status(500).send({
+                error: "Could not get developer, " + err.message
+            });
+        } else {
+            if (developer === null) {
+                res.status(500).send({
+                    error: "Could not get developer, not found"
+                });
+            } else {
+                res.status(200).send(developer);
+            }
+        }
+    });
+});
+
+app.post('/get/project', function (req, res) {
     Project.findOne({
         _id: req.body.projectId
     }, function (err, project) {
@@ -237,7 +302,93 @@ app.get('/project', function (req, res) {
     });
 });
 
-app.delete('/developer/project', function (req, res) {
+app.post('/get/projects', function (req, res) {
+    Project.find({
+        _id: { $in: req.body.projectIds}
+    }, function (err, projects) {
+        if (err) {
+            res.status(500).send({
+                error: "Could not get projects, " + err.message
+            });
+        } else {
+            if (projects === null) {
+                res.status(500).send({
+                    error: "Could not get projects, not found"
+                });
+            } else {
+                res.send(projects);
+            }
+        }
+    });
+});
+
+app.post('/get/userStory', function (req, res) {
+    UserStory.findOne({
+        _id: req.body.userStoryId
+    }, function (err, project) {
+        if (err) {
+            res.status(500).send({
+                error: "Could not get project, " + err.message
+            });
+        } else {
+            if (project === null) {
+                res.status(500).send({
+                    error: "Could not get project, not found"
+                });
+            } else {
+                res.send(project);
+            }
+        }
+    });
+});
+
+app.post('/get/userStorys', function (req, res) {
+    UserStory.find({
+        _id: { $in: req.body.userStoryIds}
+    }, function (err, userStories) {
+        if (err) {
+            res.status(500).send({
+                error: "Could not get user stories, " + err.message
+            });
+        } else {
+            if (userStories === null) {
+                res.status(500).send({
+                    error: "Could not get stories, not found"
+                });
+            } else {
+                res.send(userStories);
+            }
+        }
+    });
+});
+
+// ==================================================================
+// DELETE ROUTES
+// ==================================================================
+
+app.delete('/developer', function (req, res) {
+    Developer.findOneAndDelete({
+        _id: req.body.developerId
+    }, function (err, developer) {
+        if (err) {
+            res.status(500).send({
+                error: "Could not delete developer, " + err.message
+            });
+        } else {
+            if (developer === null) {
+                    res.status(500).send({
+                        error: "Could not delete developer, not found"
+                    });
+                } else {
+                    res.status(200).send({
+                        result: "Success"
+                    });
+                }
+        }
+    });
+});
+
+app.post('/delete/developer/project', function (req, res) {
     Project.findOneAndDelete({
         _id: req.body.projectId
     }, function (err, project) {
@@ -265,7 +416,9 @@ app.delete('/developer/project', function (req, res) {
                                 error: "Could not remove project from developer"
                             });
                         } else {
-                            res.status(200).send("Success");
+                            res.status(200).send({
+                                result: "Success"
+                            });
                         }
                     });
             }
@@ -273,6 +426,75 @@ app.delete('/developer/project', function (req, res) {
     });
 });
 
+app.post('/delete/project/userStory', function (req, res) {
+    UserStory.findOneAndDelete({
+        _id: req.body.userStoryId
+    }, function (err, userStory) {
+        if (err) {
+            res.status(500).send({
+                error: "Could not delete user story, " + err.message
+            });
+        } else {
+            if (userStory === null) {
+                res.status(500).send({
+                    error: "Could not delete user story, not found"
+                });
+            } else {
+                Project.findByIdAndUpdate(req.body.projectId, {
+                    $pull: {
+                        userStoryIds: mongoose.Types.ObjectId(req.body.userStoryId)
+                    }
+                    }, {
+                        safe: true,
+                        upsert: true
+                    },
+                    function (err, doc) {
+                        if (err) {
+                            res.status(500).send({
+                                error: "Could not remove user story from project"
+                            });
+                        } else {
+                            res.status(200).send({
+                                result: "Success"
+                            });
+                        }
+                    });
+            }
+        }
+    });
+});
+
+app.post('/delete/project/userStorys', function (req, res) {
+    UserStory.deleteMany({
+        _id: { $in: req.body.userStoryIds}
+    }, function (err, userStories) {
+        if (err) {
+            res.status(500).send({
+                error: "Could not get user stories, " + err.message
+            });
+        } else {
+            if (userStories === null) {
+                res.status(500).send({
+                    error: "Could not delete stories, not found"
+                });
+            } else {
+                res.status(200).send({
+                    result: "Success"
+                });
+            }
+        }
+    });
+});
+
+// ==================================================================
+// PUT ROUTES
+// ==================================================================
+
+
+
+// ==================================================================
+// NO ROUTES FOUND
+// ==================================================================
 
 
 app.post('*', function (req, res) {
@@ -287,6 +509,7 @@ app.get('*', function (req, res) {
     });
 });
 
+
 app.delete('*', function (req, res) {
     res.status(500).send({
         error: "That route does not exist"
@@ -298,6 +521,10 @@ app.put('*', function (req, res) {
         error: "That route does not exist"
     });
 });
+
+// ==================================================================
+// END OF ROUTES
+// ==================================================================
 
 app.listen(process.env.PORT, process.env.IP, function () {
     console.log('My Agile Story running on port ' + process.env.PORT + '...');

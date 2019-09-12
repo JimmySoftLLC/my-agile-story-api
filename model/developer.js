@@ -3,8 +3,12 @@ const Schema = mongoose.Schema;
 var ObjectId = mongoose.Schema.Types.ObjectId;
 
 var developerSchema = new Schema({
-    userName: String,
-    userPassword: String,
+    firstName: String,
+    lastName: String,
+    email: String,
+    password: String,
+    bio: String,
+    role: String,
     projectIds: [{type: ObjectId, ref: 'Project'}]
 });
 
