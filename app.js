@@ -14,6 +14,7 @@ const app = express();
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const faker = require('faker');
+var dataBaseErrorMessage = "";
 
 //Allow all reqs from all domains & localhost
 app.all('/*', function (req, res, next) {
@@ -39,8 +40,10 @@ if (process.env.NODE_ENVIRONMENT === 'production') {
         useNewUrlParser: true,
         useCreateIndex: true
     }).then(() => {
+        dataBaseErrorMessage='Connected to DB';
         console.log('Connected to DB');
     }).catch(err => {
+        dataBaseErrorMessage='ERROR:'+ err.message;
         console.log('ERROR:', err.message);
     });
 } else {
@@ -247,6 +250,10 @@ app.post('/put/userStory', function (req, res) {
 
 app.get('/', function (req, res) {
     res.render('home.ejs',{statusMessage: ""})
+});
+
+app.get('/satus', function (req, res) {
+    res.status(200).send(dataBaseErrorMessage);
 });
 
 app.get('/heat-transfer', function (req, res) {
