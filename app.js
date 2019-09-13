@@ -14,7 +14,7 @@ const app = express();
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const faker = require('faker');
-var dataBaseErrorMessage = "";
+var dataBaseErrorMessage = "Default message";
 
 //Allow all reqs from all domains & localhost
 app.all('/*', function (req, res, next) {
