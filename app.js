@@ -199,50 +199,6 @@ app.post('/project/userStory', function (req, res) {
     });
 });
 
-app.post('/put/userStory', function (req, res) {
-    UserStory.findOne({
-        _id: req.body.userStoryId
-    }, function (err, userStory) {
-        if (err) {
-            res.status(500).send({
-                error: "Could not update user story, " + err.message
-            });
-        } else {
-            if (userStory === null) {
-                res.status(500).send({
-                    error: "Could not update user story, user not found"
-                });
-            } else {
-                if (err) {
-                    res.status(500).send({
-                        error: "Could not update user story, " + err.message
-                    });
-                } else {
-                    userStory.userStoryTitle = req.body.userStoryTitle;
-                    userStory.userRole = req.body.userRole;
-                    userStory.userWant = req.body.userWant;
-                    userStory.userBenefit = req.body.userBenefit;
-                    userStory.acceptanceCriteria = req.body.acceptanceCriteria;
-                    userStory.conversation = req.body.conversation;
-                    userStory.estimate = req.body.estimate;
-                    userStory.phase = req.body.phase;
-                    userStory.percentDone = req.body.percentDone;
-                    userStory.save(function (err, savedUserStory) {
-                        if (err) {
-                            res.status(500).send({
-                                error: "Could not save user story, " + err.message
-                            });
-                        } else {
-                            res.status(200).send(savedUserStory);
-                        }
-                    });
-                }
-            }
-        }
-    });
-});
-
-
 // ==================================================================
 // GET ROUTES some do not use HTTP GET inparticular for mongoose items, 
 // primarly for security (i.e. login), and the need to use body for 
@@ -498,7 +454,84 @@ app.post('/delete/project/userStorys', function (req, res) {
 // PUT ROUTES
 // ==================================================================
 
+app.post('/put/userStory', function (req, res) {
+    UserStory.findOne({
+        _id: req.body.userStoryId
+    }, function (err, userStory) {
+        if (err) {
+            res.status(500).send({
+                error: "Could not update user story, " + err.message
+            });
+        } else {
+            if (userStory === null) {
+                res.status(500).send({
+                    error: "Could not update user story, user not found"
+                });
+            } else {
+                if (err) {
+                    res.status(500).send({
+                        error: "Could not update user story, " + err.message
+                    });
+                } else {
+                    userStory.userStoryTitle = req.body.userStoryTitle;
+                    userStory.userRole = req.body.userRole;
+                    userStory.userWant = req.body.userWant;
+                    userStory.userBenefit = req.body.userBenefit;
+                    userStory.acceptanceCriteria = req.body.acceptanceCriteria;
+                    userStory.conversation = req.body.conversation;
+                    userStory.estimate = req.body.estimate;
+                    userStory.phase = req.body.phase;
+                    userStory.percentDone = req.body.percentDone;
+                    userStory.save(function (err, savedUserStory) {
+                        if (err) {
+                            res.status(500).send({
+                                error: "Could not save user story, " + err.message
+                            });
+                        } else {
+                            res.status(200).send(savedUserStory);
+                        }
+                    });
+                }
+            }
+        }
+    });
+});
 
+app.post('/put/project', function (req, res) {
+    Project.findOne({
+        _id: req.body.projectId
+    }, function (err, project) {
+        if (err) {
+            res.status(500).send({
+                error: "Could not update project, " + err.message
+            });
+        } else {
+            if (userStory === null) {
+                res.status(500).send({
+                    error: "Could not update project, project not found"
+                });
+            } else {
+                if (err) {
+                    res.status(500).send({
+                        error: "Could not update project, " + err.message
+                    });
+                } else {
+                    project.name = req.body.name;
+                    project.description = req.body.description;
+                    project.save(function (err, savedProject) {
+                        if (err) {
+                            res.status(500).send({
+                                error: "Could not save project, " + err.message
+                            });
+                        } else {
+                            res.status(200).send(savedProject);
+                        }
+                    });
+                }
+            }
+        }
+    });
+});
 
 // ==================================================================
 // NO ROUTES FOUND
