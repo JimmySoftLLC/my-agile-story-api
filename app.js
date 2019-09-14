@@ -90,7 +90,7 @@ app.post('/developer', function (req, res) {
                 developer.firstName = req.body.firstName;
                 developer.lastName = req.body.lastName;
                 developer.bio = req.body.bio;
-                developer.role = "admin" // TODO add req.body.role;
+                developer.role = req.body.role;
                 developer.save(function (err, savedDeveloper) {
                     if (err) {
                         // res.render('home.ejs', {statusMessage: "Could not create developer, " + err.message} )
@@ -506,7 +506,7 @@ app.post('/put/project', function (req, res) {
                 error: "Could not update project, " + err.message
             });
         } else {
-            if (userStory === null) {
+            if (project === null) {
                 res.status(500).send({
                     error: "Could not update project, project not found"
                 });
@@ -525,6 +525,46 @@ app.post('/put/project', function (req, res) {
                             });
                         } else {
                             res.status(200).send(savedProject);
+                        }
+                    });
+                }
+            }
+        }
+    });
+});
+
+app.post('/put/developer', function (req, res) {
+    Developer.findOne({
+        _id: req.body.developerId
+    }, function (err, developer) {
+        if (err) {
+            res.status(500).send({
+                error: "Could not update developer, " + err.message
+            });
+        } else {
+            if (developer === null) {
+                res.status(500).send({
+                    error: "Could not update developer, developer not found"
+                });
+            } else {
+                if (err) {
+                    res.status(500).send({
+                        error: "Could not update developer, " + err.message
+                    });
+                } else {
+                    developer.firstName = req.body.firstName;
+                    developer.lastName = req.body.lastName;
+                    developer.email = req.body.email;
+                    developer.password = req.body.password;
+                    developer.bio = req.body.bio;
+                    developer.role = req.body.role;
+                    developer.save(function (err, savedDeveloper) {
+                        if (err) {
+                            res.status(500).send({
+                                error: "Could not save developer, " + err.message
+                            });
+                        } else {
+                            res.status(200).send(savedDeveloper);
                         }
                     });
                 }
