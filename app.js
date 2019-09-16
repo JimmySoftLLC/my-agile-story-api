@@ -175,6 +175,7 @@ app.post('/project/userStory', function (req, res) {
                 userStory.estimate = req.body.estimate;
                 userStory.phase = req.body.phase;
                 userStory.percentDone = req.body.percentDone;
+                userStory.priority = req.body.priority;
                 userStory.projectId = req.body.projectId;
                 userStory.save(function (err, savedUserStory) {
                     if (err) {
@@ -482,6 +483,7 @@ app.post('/put/userStory', function (req, res) {
                     userStory.estimate = req.body.estimate;
                     userStory.phase = req.body.phase;
                     userStory.percentDone = req.body.percentDone;
+                    userStory.priority = req.body.priority;
                     userStory.save(function (err, savedUserStory) {
                         if (err) {
                             res.status(500).send({
