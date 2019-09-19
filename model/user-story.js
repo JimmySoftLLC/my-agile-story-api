@@ -13,6 +13,7 @@ var userStorySchema = new Schema({
     phase: String,
     percentDone: Number,
     priority: Number,
+    sprint: Number,
     projectId: {type: ObjectId, ref: 'Project'}
 });
 
