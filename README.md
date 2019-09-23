@@ -124,7 +124,7 @@ To get a user story use ```POST /get/userStory``` with a JSON body consisting of
 
 ### /get/userStorys
 
-To get an array of user stories use ```POST /get/userStorys``` with a JSON body consisting of key value pair: userStoryIds. userStoryIds is a an array of userStoryId.
+To get an array of user stories use ```POST /get/userStorys``` with a JSON body consisting of key value pair: userStoryIds. userStoryIds is an array of userStoryId.
 
 # Delete methods
 
@@ -142,9 +142,9 @@ To delete a user story from a project use ```POST /delete/project/userStory``` w
 
 ### /delete/project/userStorys
 
-To delete many user stories from a project use ```POST /delete/project/userStory``` with a JSON body consisting of key value pairs: userStoryIds, projectId.  userStoryIds is a an array of userStoryId.
+To delete many user stories from a project use ```POST /delete/project/userStory``` with a JSON body consisting of key value pairs: userStoryIds, projectId.  userStoryIds is an array of userStoryId.
 
-# Delete methods
+# Put methods
 
 ### /put/developer
 
