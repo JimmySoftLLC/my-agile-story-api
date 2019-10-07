@@ -6,7 +6,8 @@ var projectSchema = new Schema({
     name: String, 
     description: String,
     developerIds: [{type: ObjectId, ref: 'Developer'}],
-    userStoryIds: [{type: ObjectId, ref: 'UserStory'}]
+    userStoryIds: [{type: ObjectId, ref: 'UserStory'}],
+    timeStampISO: String,
 });
 
 module.exports = mongoose.model('Project', projectSchema);

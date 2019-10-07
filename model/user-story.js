@@ -14,7 +14,8 @@ var userStorySchema = new Schema({
     percentDone: Number,
     priority: Number,
     sprint: Number,
-    projectId: {type: ObjectId, ref: 'Project'}
+    projectId: {type: ObjectId, ref: 'Project'},
+    timeStampISO: String,
 });
 
 module.exports = mongoose.model('UserStory', userStorySchema);

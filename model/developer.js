@@ -9,7 +9,8 @@ var developerSchema = new Schema({
     password: String,
     bio: String,
     role: String,
-    projectIds: [{type: ObjectId, ref: 'Project'}]
+    projectIds: [{type: ObjectId, ref: 'Project'}],
+    timeStampISO: String,
 });
 
 module.exports = mongoose.model('Developer', developerSchema);
