@@ -558,7 +558,7 @@ app.post("/put/userStory", function(req, res) {
       } else {
         if (userStory === null) {
           res.status(500).send({
-            error: "Could not update user story, user not found"
+            error: "Could not update user story, user story not found"
           });
         } else {
           if (err) {
@@ -585,6 +585,98 @@ app.post("/put/userStory", function(req, res) {
                 });
               } else {
                 res.status(200).send(savedUserStory);
+              }
+            });
+          }
+        }
+      }
+    }
+  );
+});
+
+app.post("/put/userStoryWithProjectId", function(req, res) {
+  var timeStampISO = getTimeStamp();
+  Project.findOne(
+    {
+      _id: req.body.projectId
+    },
+    function(err, project) {
+      if (err) {
+        res.status(500).send({
+          error: "Could not update project, " + err.message
+        });
+      } else {
+        if (project === null) {
+          res.status(500).send({
+            error: "Could not update project, project not found"
+          });
+        } else {
+          if (err) {
+            res.status(500).send({
+              error: "Could not update project, " + err.message
+            });
+          } else {
+            project.timeStampISO = timeStampISO;
+            project.save(function(err, savedProject) {
+              if (err) {
+                res.status(500).send({
+                  error: "Could not save project, " + err.message
+                });
+              } else {
+                UserStory.findOne(
+                  {
+                    _id: req.body.userStoryId
+                  },
+                  function(err, userStory) {
+                    if (err) {
+                      res.status(500).send({
+                        error: "Could not update user story, " + err.message
+                      });
+                    } else {
+                      if (userStory === null) {
+                        res.status(500).send({
+                          error:
+                            "Could not update user story, user story not found"
+                        });
+                      } else {
+                        if (err) {
+                          res.status(500).send({
+                            error: "Could not update user story, " + err.message
+                          });
+                        } else {
+                          userStory.userStoryTitle = req.body.userStoryTitle;
+                          userStory.userRole = req.body.userRole;
+                          userStory.userWant = req.body.userWant;
+                          userStory.userBenefit = req.body.userBenefit;
+                          userStory.acceptanceCriteria =
+                            req.body.acceptanceCriteria;
+                          userStory.conversation = req.body.conversation;
+                          userStory.estimate = req.body.estimate;
+                          userStory.phase = req.body.phase;
+                          userStory.percentDone = req.body.percentDone;
+                          userStory.priority = req.body.priority;
+                          userStory.sprint = req.body.sprint;
+                          userStory.timeStampISO = timeStampISO;
+                          userStory.save(function(err, savedUserStory) {
+                            if (err) {
+                              res.status(500).send({
+                                error:
+                                  "Could not save user story, " + err.message
+                              });
+                            } else {
+                              res
+                                .status(200)
+                                .send({
+                                  userStory: savedUserStory,
+                                  project: savedProject
+                                });
+                            }
+                          });
+                        }
+                      }
+                    }
+                  }
+                );
               }
             });
           }
