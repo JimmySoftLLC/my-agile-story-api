@@ -243,6 +243,65 @@ app.post("/project/userStory", function(req, res) {
   );
 });
 
+app.post("/project/userStoryWithProjectId", function(req, res) {
+  var timeStampISO = getTimeStamp();
+  Project.findOne(
+    {
+      _id: req.body.projectId
+    },
+    function(err, project) {
+      if (err) {
+        res.status(500).send({
+          error: "Could not create user story, " + err.message
+        });
+      } else {
+        if (project === null) {
+          res.status(500).send({
+            error: "Could not create user story, Project not found"
+          });
+        } else {
+          var userStory = new UserStory();
+          userStory.userStoryTitle = req.body.userStoryTitle;
+          userStory.userRole = req.body.userRole;
+          userStory.userWant = req.body.userWant;
+          userStory.userBenefit = req.body.userBenefit;
+          userStory.acceptanceCriteria = req.body.acceptanceCriteria;
+          userStory.conversation = req.body.conversation;
+          userStory.estimate = req.body.estimate;
+          userStory.phase = req.body.phase;
+          userStory.percentDone = req.body.percentDone;
+          userStory.priority = req.body.priority;
+          userStory.sprint = req.body.sprint;
+          userStory.projectId = req.body.projectId;
+          userStory.timeStampISO = timeStampISO;
+          userStory.save(function(err, savedUserStory) {
+            if (err) {
+              res.status(500).send({
+                error: "Could not create user story, " + err.message
+              });
+            } else {
+              project.userStoryIds.push(savedUserStory._id);
+              project.timeStampISO = timeStampISO;
+              project.save(function(err, savedProject) {
+                if (err) {
+                  res.status(500).send({
+                    error: "Could not save project, " + err.message
+                  });
+                } else {
+                  res.status(200).send({
+                    userStory: savedUserStory,
+                    project: savedProject
+                  });
+                }
+              });
+            }
+          });
+        }
+      }
+    }
+  );
+});
+
 // ==================================================================
 // GET ROUTES some do not use HTTP GET inparticular for mongoose items,
 // primarly for security (i.e. login), and the need to use body for
@@ -664,12 +723,10 @@ app.post("/put/userStoryWithProjectId", function(req, res) {
                                   "Could not save user story, " + err.message
                               });
                             } else {
-                              res
-                                .status(200)
-                                .send({
-                                  userStory: savedUserStory,
-                                  project: savedProject
-                                });
+                              res.status(200).send({
+                                userStory: savedUserStory,
+                                project: savedProject
+                              });
                             }
                           });
                         }
