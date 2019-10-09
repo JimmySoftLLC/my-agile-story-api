@@ -223,7 +223,7 @@ app.post("/developer/project/returnProjectAndDeveloper", function(req, res) {
                   });
                 } else {
                   res.status(200).send({
-                    developer: savedDeveloper,
+                    developer: developer,
                     project: savedProject
                   });
                 }
@@ -338,8 +338,8 @@ app.post("/project/userStory/returnUserStoryAndProject", function(req, res) {
                   });
                 } else {
                   res.status(200).send({
-                    userStory: savedUserStory,
-                    project: savedProject
+                    project: project,
+                    userStory: savedUserStory
                   });
                 }
               });
