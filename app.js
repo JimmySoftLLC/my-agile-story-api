@@ -550,7 +550,7 @@ app.post("/delete/developer/project", function(req, res) {
             req.body.developerId,
             {
               $pull: {
-                projectIds: mongoose.Types.ObjectId(req.body.projectId)
+                projectIds: new mongoose.Types.ObjectId(req.body.projectId)
               },
               $set: { timeStampISO: timeStampISO }
             },
