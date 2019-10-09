@@ -223,8 +223,8 @@ app.post("/developer/project/returnProjectAndDeveloper", function(req, res) {
                   });
                 } else {
                   res.status(200).send({
-                    developer: developer,
-                    project: savedProject
+                    project: savedProject,
+                    developer: developer
                   });
                 }
               });
@@ -338,8 +338,8 @@ app.post("/project/userStory/returnUserStoryAndProject", function(req, res) {
                   });
                 } else {
                   res.status(200).send({
-                    project: project,
-                    userStory: savedUserStory
+                    userStory: savedUserStory,
+                    project: project
                   });
                 }
               });
@@ -770,7 +770,7 @@ app.post("/put/userStory/returnUserStoryAndProject", function(req, res) {
                             } else {
                               res.status(200).send({
                                 userStory: savedUserStory,
-                                project: savedProject
+                                project: project
                               });
                             }
                           });
@@ -890,8 +890,8 @@ app.post("/put/project/returnProjectAndDeveloper", function(req, res) {
                               });
                             } else {
                               res.status(200).send({
-                                developer: savedDeveloper,
-                                project: savedProject
+                                project: savedProject,
+                                developer: developer
                               });
                             }
                           });
