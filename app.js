@@ -546,11 +546,11 @@ app.post("/delete/developer/project", function(req, res) {
             error: "Could not delete project, not found"
           });
         } else {
-          Developer.findOneAndUpdate(
+          Developer.findByIdAndUpdate(
             req.body.developerId,
             {
               $pull: {
-                projectIds: req.body.projectId
+                projectIds: mongoose.Types.ObjectId(req.body.projectId)
               },
               $set: { timeStampISO: timeStampISO }
             },
