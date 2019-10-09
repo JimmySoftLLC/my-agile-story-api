@@ -187,6 +187,56 @@ app.post("/developer/project", function(req, res) {
   );
 });
 
+app.post("/developer/projectWithDeveloperId", function(req, res) {
+  var timeStampISO = getTimeStamp();
+  Developer.findOne(
+    {
+      _id: req.body.developerId
+    },
+    function(err, developer) {
+      if (err) {
+        res.status(500).send({
+          error: "Could not create project, " + err.message
+        });
+      } else {
+        if (developer === null) {
+          res.status(500).send({
+            error: "Could not create project, developer not found"
+          });
+        } else {
+          var project = new Project();
+          project.name = req.body.name;
+          project.description = req.body.description;
+          project.developerIds.push(developer._id);
+          project.timeStampISO = timeStampISO;
+          project.save(function(err, savedProject) {
+            if (err) {
+              res.status(500).send({
+                error: "Could not create project, " + err.message
+              });
+            } else {
+              developer.projectIds.push(savedProject._id);
+              developer.timeStampISO = timeStampISO;
+              developer.save(function(err, savedDeveloper) {
+                if (err) {
+                  res.status(500).send({
+                    error: "Could not save developer, " + err.message
+                  });
+                } else {
+                  res.status(200).send({
+                    developer: savedDeveloper,
+                    project: savedProject
+                  });
+                }
+              });
+            }
+          });
+        }
+      }
+    }
+  );
+});
+
 app.post("/project/userStory", function(req, res) {
   var timeStampISO = getTimeStamp();
   Project.findOne(
