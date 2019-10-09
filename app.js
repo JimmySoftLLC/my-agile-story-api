@@ -759,8 +759,6 @@ app.post("/put/userStory/returnUserStoryAndProject", function(req, res) {
                             error: "Could not update project, " + err.message
                           });
                         } else {
-                          project.name = req.body.name;
-                          project.description = req.body.description;
                           project.timeStampISO = timeStampISO;
                           project.save(function(err, savedProject) {
                             if (err) {
@@ -770,7 +768,7 @@ app.post("/put/userStory/returnUserStoryAndProject", function(req, res) {
                             } else {
                               res.status(200).send({
                                 userStory: savedUserStory,
-                                project: project
+                                project: savedProject
                               });
                             }
                           });
@@ -891,7 +889,7 @@ app.post("/put/project/returnProjectAndDeveloper", function(req, res) {
                             } else {
                               res.status(200).send({
                                 project: savedProject,
-                                developer: developer
+                                developer: savedDeveloper
                               });
                             }
                           });
