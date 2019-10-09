@@ -224,7 +224,7 @@ app.post("/developer/project/returnProjectAndDeveloper", function(req, res) {
                 } else {
                   res.status(200).send({
                     project: savedProject,
-                    developer: developer
+                    developer: savedDeveloper
                   });
                 }
               });
@@ -339,7 +339,7 @@ app.post("/project/userStory/returnUserStoryAndProject", function(req, res) {
                 } else {
                   res.status(200).send({
                     userStory: savedUserStory,
-                    project: project
+                    project: savedProject
                   });
                 }
               });
@@ -557,13 +557,13 @@ app.post("/delete/developer/project", function(req, res) {
               safe: true,
               upsert: true
             },
-            function(err, developer) {
+            function(err, SavedDeveloper) {
               if (err) {
                 res.status(500).send({
                   error: "Could not remove project from developer"
                 });
               } else {
-                res.status(200).send(developer);
+                res.status(200).send(SavedDeveloper);
               }
             }
           );
@@ -603,13 +603,13 @@ app.post("/delete/project/userStory", function(req, res) {
               safe: true,
               upsert: true
             },
-            function(err, project) {
+            function(err, SavedProject) {
               if (err) {
                 res.status(500).send({
                   error: "Could not remove user story from project"
                 });
               } else {
-                res.status(200).send(project);
+                res.status(200).send(SavedProject);
               }
             }
           );
