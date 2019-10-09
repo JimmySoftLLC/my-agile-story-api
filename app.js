@@ -546,7 +546,7 @@ app.post("/delete/developer/project", function(req, res) {
             error: "Could not delete project, not found"
           });
         } else {
-          Developer.findByIdAndUpdate(
+          Developer.findOneAndUpdate(
             req.body.developerId,
             {
               $pull: {
