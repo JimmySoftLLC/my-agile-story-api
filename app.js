@@ -86,7 +86,6 @@ var UserStory = require("./model/user-story");
 // ==================================================================
 function getTimeStamp() {
   var timeStampISO = new Date().toISOString();
-  console.log(timeStampISO);
   return timeStampISO;
 }
 
@@ -380,7 +379,6 @@ app.get("/process-load", function(req, res) {
 
 app.get("/timestamp", function(req, res) {
   var timeStampISO = getTimeStamp();
-  //     var timeStampISO = getTimeStamp();
   res.status(200).send(timeStampISO);
 });
 
@@ -424,7 +422,7 @@ app.post("/get/project", function(req, res) {
             error: "Could not get project, not found"
           });
         } else {
-          res.send(project);
+          res.status(200).send(project);
         }
       }
     }
@@ -447,7 +445,7 @@ app.post("/get/projects", function(req, res) {
             error: "Could not get projects, not found"
           });
         } else {
-          res.send(projects);
+          res.status(200).send(projects);
         }
       }
     }
@@ -459,18 +457,18 @@ app.post("/get/userStory", function(req, res) {
     {
       _id: req.body.userStoryId
     },
-    function(err, project) {
+    function(err, userStory) {
       if (err) {
         res.status(500).send({
-          error: "Could not get project, " + err.message
+          error: "Could not get user story, " + err.message
         });
       } else {
-        if (project === null) {
+        if (userStory === null) {
           res.status(500).send({
-            error: "Could not get project, not found"
+            error: "Could not get user story, not found"
           });
         } else {
-          res.send(project);
+          res.status(200).send(userStory);
         }
       }
     }
@@ -493,7 +491,7 @@ app.post("/get/userStorys", function(req, res) {
             error: "Could not get stories, not found"
           });
         } else {
-          res.send(userStories);
+          res.status(200).send(userStories);
         }
       }
     }
@@ -555,18 +553,17 @@ app.post("/delete/developer/project", function(req, res) {
               $set: { timeStampISO: timeStampISO }
             },
             {
+              new: true,
               safe: true,
               upsert: true
             },
-            function(err, doc) {
+            function(err, developer) {
               if (err) {
                 res.status(500).send({
                   error: "Could not remove project from developer"
                 });
               } else {
-                res.status(200).send({
-                  result: "Success"
-                });
+                res.status(200).send(developer);
               }
             }
           );
@@ -602,18 +599,17 @@ app.post("/delete/project/userStory", function(req, res) {
               $set: { timeStampISO: timeStampISO }
             },
             {
+              new: true,
               safe: true,
               upsert: true
             },
-            function(err, doc) {
+            function(err, project) {
               if (err) {
                 res.status(500).send({
                   error: "Could not remove user story from project"
                 });
               } else {
-                res.status(200).send({
-                  result: "Success"
-                });
+                res.status(200).send(project);
               }
             }
           );
@@ -705,72 +701,71 @@ app.post("/put/userStory", function(req, res) {
 
 app.post("/put/userStory/returnUserStoryAndProject", function(req, res) {
   var timeStampISO = getTimeStamp();
-  Project.findOne(
+  UserStory.findOne(
     {
-      _id: req.body.projectId
+      _id: req.body.userStoryId
     },
-    function(err, project) {
+    function(err, userStory) {
       if (err) {
         res.status(500).send({
-          error: "Could not update project, " + err.message
+          error: "Could not update user story, " + err.message
         });
       } else {
-        if (project === null) {
+        if (userStory === null) {
           res.status(500).send({
-            error: "Could not update project, project not found"
+            error: "Could not update user story, user story not found"
           });
         } else {
           if (err) {
             res.status(500).send({
-              error: "Could not update project, " + err.message
+              error: "Could not update user story, " + err.message
             });
           } else {
-            project.timeStampISO = timeStampISO;
-            project.save(function(err, savedProject) {
+            userStory.userStoryTitle = req.body.userStoryTitle;
+            userStory.userRole = req.body.userRole;
+            userStory.userWant = req.body.userWant;
+            userStory.userBenefit = req.body.userBenefit;
+            userStory.acceptanceCriteria = req.body.acceptanceCriteria;
+            userStory.conversation = req.body.conversation;
+            userStory.estimate = req.body.estimate;
+            userStory.phase = req.body.phase;
+            userStory.percentDone = req.body.percentDone;
+            userStory.priority = req.body.priority;
+            userStory.sprint = req.body.sprint;
+            userStory.timeStampISO = timeStampISO;
+            userStory.save(function(err, savedUserStory) {
               if (err) {
                 res.status(500).send({
-                  error: "Could not save project, " + err.message
+                  error: "Could not save user story, " + err.message
                 });
               } else {
-                UserStory.findOne(
+                Project.findOne(
                   {
-                    _id: req.body.userStoryId
+                    _id: req.body.projectId
                   },
-                  function(err, userStory) {
+                  function(err, project) {
                     if (err) {
                       res.status(500).send({
-                        error: "Could not update user story, " + err.message
+                        error: "Could not update project, " + err.message
                       });
                     } else {
-                      if (userStory === null) {
+                      if (project === null) {
                         res.status(500).send({
-                          error:
-                            "Could not update user story, user story not found"
+                          error: "Could not update project, project not found"
                         });
                       } else {
                         if (err) {
                           res.status(500).send({
-                            error: "Could not update user story, " + err.message
+                            error: "Could not update project, " + err.message
                           });
                         } else {
-                          userStory.userStoryTitle = req.body.userStoryTitle;
-                          userStory.userRole = req.body.userRole;
-                          userStory.userWant = req.body.userWant;
-                          userStory.userBenefit = req.body.userBenefit;
-                          userStory.acceptanceCriteria =
-                            req.body.acceptanceCriteria;
-                          userStory.conversation = req.body.conversation;
-                          userStory.estimate = req.body.estimate;
-                          userStory.phase = req.body.phase;
-                          userStory.percentDone = req.body.percentDone;
-                          userStory.priority = req.body.priority;
-                          userStory.sprint = req.body.sprint;
-                          userStory.timeStampISO = timeStampISO;
-                          userStory.save(function(err, savedUserStory) {
+                          project.name = req.body.name;
+                          project.description = req.body.description;
+                          project.timeStampISO = timeStampISO;
+                          project.save(function(err, savedProject) {
                             if (err) {
                               res.status(500).send({
-                                error:
-                                  "Could not save user story, " + err.message
+                                error: "Could not save project, " + err.message
                               });
                             } else {
                               res.status(200).send({
@@ -825,6 +820,86 @@ app.post("/put/project", function(req, res) {
                 });
               } else {
                 res.status(200).send(savedProject);
+              }
+            });
+          }
+        }
+      }
+    }
+  );
+});
+
+app.post("/put/project/returnProjectAndDeveloper", function(req, res) {
+  var timeStampISO = getTimeStamp();
+  Project.findOne(
+    {
+      _id: req.body.projectId
+    },
+    function(err, project) {
+      if (err) {
+        res.status(500).send({
+          error: "Could not update project, " + err.message
+        });
+      } else {
+        if (project === null) {
+          res.status(500).send({
+            error: "Could not update project, project not found"
+          });
+        } else {
+          if (err) {
+            res.status(500).send({
+              error: "Could not update project, " + err.message
+            });
+          } else {
+            project.name = req.body.name;
+            project.description = req.body.description;
+            project.timeStampISO = timeStampISO;
+            project.save(function(err, savedProject) {
+              if (err) {
+                res.status(500).send({
+                  error: "Could not save project, " + err.message
+                });
+              } else {
+                Developer.findOne(
+                  {
+                    _id: req.body.developerId
+                  },
+                  function(err, developer) {
+                    if (err) {
+                      res.status(500).send({
+                        error: "Could not update developer, " + err.message
+                      });
+                    } else {
+                      if (developer === null) {
+                        res.status(500).send({
+                          error:
+                            "Could not update developer, developer not found"
+                        });
+                      } else {
+                        if (err) {
+                          res.status(500).send({
+                            error: "Could not update developer, " + err.message
+                          });
+                        } else {
+                          developer.timeStampISO = timeStampISO;
+                          developer.save(function(err, savedDeveloper) {
+                            if (err) {
+                              res.status(500).send({
+                                error:
+                                  "Could not save developer, " + err.message
+                              });
+                            } else {
+                              res.status(200).send({
+                                developer: savedDeveloper,
+                                project: savedProject
+                              });
+                            }
+                          });
+                        }
+                      }
+                    }
+                  }
+                );
               }
             });
           }
