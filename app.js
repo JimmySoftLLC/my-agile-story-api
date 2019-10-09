@@ -187,7 +187,7 @@ app.post("/developer/project", function(req, res) {
   );
 });
 
-app.post("/developer/projectWithDeveloperId", function(req, res) {
+app.post("/developer/project/returnProjectAndDeveloper", function(req, res) {
   var timeStampISO = getTimeStamp();
   Developer.findOne(
     {
@@ -293,7 +293,7 @@ app.post("/project/userStory", function(req, res) {
   );
 });
 
-app.post("/project/userStoryWithProjectId", function(req, res) {
+app.post("/project/userStory/returnUserStoryAndProject", function(req, res) {
   var timeStampISO = getTimeStamp();
   Project.findOne(
     {
@@ -703,7 +703,7 @@ app.post("/put/userStory", function(req, res) {
   );
 });
 
-app.post("/put/userStoryWithProjectId", function(req, res) {
+app.post("/put/userStory/returnUserStoryAndProject", function(req, res) {
   var timeStampISO = getTimeStamp();
   Project.findOne(
     {
