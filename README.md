@@ -167,6 +167,6 @@ To edit a developer use `POST /put/developer` with a JSON body consisting of key
 
 To edit a project use `POST /put/project` with a JSON body consisting of key value pairs: name, description.
 
-### /project/userStory
+### /put/userStory
 
-To create a new user story use `POST /project/userStory` with a JSON body consisting of key value pairs: userStoryTitle, userRole, userWant, userBenifit, acceptanceCriteria, conversation, estimate, phase, percentDone, priority, sprint. ProjectId is not passed because it does not change.
+To create a new user story use `POST /put/userStory` with a JSON body consisting of key value pairs: userStoryTitle, userRole, userWant, userBenifit, acceptanceCriteria, conversation, estimate, phase, percentDone, priority, sprint. ProjectId is not passed because it does not change.
