@@ -13,11 +13,10 @@ const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
-const faker = require('faker');
-var dataBaseErrorMessage = 'Default message';
+const validator = require('validator');
 
 //Allow all reqs from all domains & localhost
-app.all('/*', function (req, res, next) {
+app.all('/*', function(req, res, next) {
   res.header('Access-Control-Allow-Origin', '*');
   res.header(
     'Access-Control-Allow-Headers',
@@ -46,10 +45,11 @@ if (process.env.NODE_ENVIRONMENT === 'production') {
   const db = mongoose
     .connect(
       'mongodb+srv://' +
-      process.env.MONGO_USER +
-      ':' +
-      process.env.MONGO_PASWORD +
-      '@cluster0-yxay5.mongodb.net/test?retryWrites=true&w=majority', {
+        process.env.MONGO_USER +
+        ':' +
+        process.env.MONGO_PASWORD +
+        '@cluster0-yxay5.mongodb.net/test?retryWrites=true&w=majority',
+      {
         useNewUrlParser: true,
         useCreateIndex: true,
       }
@@ -93,57 +93,134 @@ function getTimeStamp() {
 // POST ROUTES
 // ==================================================================
 
-app.post('/developer', function (req, res) {
-  //first check if develop exists if so return and error
-  var timeStampISO = getTimeStamp();
-  Developer.findOne({
-      email: req.body.email.toLowerCase(),
-    },
-    function (err, developerInDatabase) {
-      if (err) {
-        // res.render('home.ejs', {statusMessage: "Could not create developer, " + err.message} )
-        res.status(500).send({
-          error: 'Could not create developer, ' + err.message,
-        });
-      } else {
-        if (developerInDatabase !== null) {
-          // res.render('home.ejs', {statusMessage: "Could not create developer, already exists."})
+notAllowed = ['sex', 'porn', 'https', 'http', 'www.'];
+
+function containsBlackListedStuff(myString) {
+  if (myString === '') return false;
+  // first check alpha numeric or . ? , space ! $ # are only in string
+  let charNotValid = true;
+  for (let i = 0; i < myString.length; i++) {
+    charNotValid = true;
+    let myASCIINumb = myString.charCodeAt(i);
+    if (myASCIINumb >= 32 && myASCIINumb <= 33) charNotValid = false;
+    if (myASCIINumb >= 35 && myASCIINumb <= 36) charNotValid = false;
+    if (myASCIINumb >= 48 && myASCIINumb <= 57) charNotValid = false;
+    if (myASCIINumb >= 65 && myASCIINumb <= 90) charNotValid = false;
+    if (myASCIINumb >= 97 && myASCIINumb <= 122) charNotValid = false;
+    if (myASCIINumb === 46) charNotValid = false;
+    if (myASCIINumb === 63) charNotValid = false;
+    if (charNotValid) {
+      break;
+    }
+  }
+
+  if (charNotValid) return true;
+
+  // now check if bad words are present
+  for (let i = 0; i < notAllowed.length; i++) {
+    if (validator.contains(myString, notAllowed[i])) {
+      return true;
+    }
+  }
+  return false;
+}
+
+app.post('/developer', function(req, res) {
+  // first validate all entries if wrong send back error
+  let validationFailed = false;
+  let validationFailureReason = '';
+
+  if (!validator.isEmail(req.body.email.toLowerCase())) {
+    validationFailed = true;
+    validationFailureReason = 'This is not a valid email address.';
+  }
+
+  if (containsBlackListedStuff(req.body.password)) {
+    console.log('got to password check');
+    validationFailed = true;
+    validationFailureReason = 'This is not a valid password.';
+  }
+
+  if (containsBlackListedStuff(req.body.firstName)) {
+    validationFailed = true;
+    validationFailureReason = 'This is not a valid first name.';
+  }
+
+  if (containsBlackListedStuff(req.body.lastName)) {
+    validationFailed = true;
+    validationFailureReason = 'This is not a valid last name.';
+  }
+
+  if (containsBlackListedStuff(req.body.bio)) {
+    validationFailed = true;
+    validationFailureReason = 'This is not a valid bio.';
+  }
+
+  if (containsBlackListedStuff(req.body.role)) {
+    validationFailed = true;
+    validationFailureReason = 'This is not valid role.';
+  }
+
+  if (validationFailed) {
+    res.status(500).send({
+      error:
+        validationFailureReason +
+        '  Valid characters are alpha numeric, period, space, ? ! $ #.',
+    });
+  } else {
+    //first check if develop exists if so return and error
+    var timeStampISO = getTimeStamp();
+    Developer.findOne(
+      {
+        email: req.body.email.toLowerCase(),
+      },
+      function(err, developerInDatabase) {
+        if (err) {
+          // res.render('home.ejs', {statusMessage: "Could not create developer, " + err.message} )
           res.status(500).send({
-            error: 'Could not create developer, already exists.',
+            error: 'Could not create developer, ' + err.message,
           });
         } else {
-          //developer doesn't exist so create a new one
-          var developer = new Developer();
-          developer.email = req.body.email.toLowerCase();
-          developer.password = req.body.password;
-          developer.firstName = req.body.firstName;
-          developer.lastName = req.body.lastName;
-          developer.bio = req.body.bio;
-          developer.role = req.body.role;
-          developer.timeStampISO = timeStampISO;
-          developer.save(function (err, savedDeveloper) {
-            if (err) {
-              // res.render('home.ejs', {statusMessage: "Could not create developer, " + err.message} )
-              res.status(500).send({
-                error: 'Could not create developer, ' + err.message,
-              });
-            } else {
-              // res.render('home.ejs', {statusMessage: "Developer created sucessfully!"} )
-              res.status(200).send(savedDeveloper);
-            }
-          });
+          if (developerInDatabase !== null) {
+            // res.render('home.ejs', {statusMessage: "Could not create developer, already exists."})
+            res.status(500).send({
+              error: 'Could not create developer, already exists.',
+            });
+          } else {
+            //developer doesn't exist so create a new one
+            var developer = new Developer();
+            developer.email = req.body.email.toLowerCase();
+            developer.password = req.body.password;
+            developer.firstName = req.body.firstName;
+            developer.lastName = req.body.lastName;
+            developer.bio = req.body.bio;
+            developer.role = req.body.role;
+            developer.timeStampISO = timeStampISO;
+            developer.save(function(err, savedDeveloper) {
+              if (err) {
+                // res.render('home.ejs', {statusMessage: "Could not create developer, " + err.message} )
+                res.status(500).send({
+                  error: 'Could not create developer, ' + err.message,
+                });
+              } else {
+                // res.render('home.ejs', {statusMessage: "Developer created sucessfully!"} )
+                res.status(200).send(savedDeveloper);
+              }
+            });
+          }
         }
       }
-    }
-  );
+    );
+  }
 });
 
-app.post('/developer/project', function (req, res) {
+app.post('/developer/project', function(req, res) {
   var timeStampISO = getTimeStamp();
-  Developer.findOne({
+  Developer.findOne(
+    {
       _id: req.body.developerId,
     },
-    function (err, developer) {
+    function(err, developer) {
       if (err) {
         res.status(500).send({
           error: 'Could not create project, ' + err.message,
@@ -159,7 +236,7 @@ app.post('/developer/project', function (req, res) {
           project.description = req.body.description;
           project.developerIds.push(developer._id);
           project.timeStampISO = timeStampISO;
-          project.save(function (err, savedProject) {
+          project.save(function(err, savedProject) {
             if (err) {
               res.status(500).send({
                 error: 'Could not create project, ' + err.message,
@@ -167,7 +244,7 @@ app.post('/developer/project', function (req, res) {
             } else {
               developer.projectIds.push(savedProject._id);
               developer.timeStampISO = timeStampISO;
-              developer.save(function (err, savedDeveloper) {
+              developer.save(function(err, savedDeveloper) {
                 if (err) {
                   res.status(500).send({
                     error: 'Could not save developer, ' + err.message,
@@ -184,12 +261,13 @@ app.post('/developer/project', function (req, res) {
   );
 });
 
-app.post('/developer/project/returnProjectAndDeveloper', function (req, res) {
+app.post('/developer/project/returnProjectAndDeveloper', function(req, res) {
   var timeStampISO = getTimeStamp();
-  Developer.findOne({
+  Developer.findOne(
+    {
       _id: req.body.developerId,
     },
-    function (err, developer) {
+    function(err, developer) {
       if (err) {
         res.status(500).send({
           error: 'Could not create project, ' + err.message,
@@ -205,7 +283,7 @@ app.post('/developer/project/returnProjectAndDeveloper', function (req, res) {
           project.description = req.body.description;
           project.developerIds.push(developer._id);
           project.timeStampISO = timeStampISO;
-          project.save(function (err, savedProject) {
+          project.save(function(err, savedProject) {
             if (err) {
               res.status(500).send({
                 error: 'Could not create project, ' + err.message,
@@ -213,7 +291,7 @@ app.post('/developer/project/returnProjectAndDeveloper', function (req, res) {
             } else {
               developer.projectIds.push(savedProject._id);
               developer.timeStampISO = timeStampISO;
-              developer.save(function (err, savedDeveloper) {
+              developer.save(function(err, savedDeveloper) {
                 if (err) {
                   res.status(500).send({
                     error: 'Could not save developer, ' + err.message,
@@ -233,12 +311,13 @@ app.post('/developer/project/returnProjectAndDeveloper', function (req, res) {
   );
 });
 
-app.post('/project/userStory', function (req, res) {
+app.post('/project/userStory', function(req, res) {
   var timeStampISO = getTimeStamp();
-  Project.findOne({
+  Project.findOne(
+    {
       _id: req.body.projectId,
     },
-    function (err, project) {
+    function(err, project) {
       if (err) {
         res.status(500).send({
           error: 'Could not create user story, ' + err.message,
@@ -263,7 +342,7 @@ app.post('/project/userStory', function (req, res) {
           userStory.sprint = req.body.sprint;
           userStory.projectId = req.body.projectId;
           userStory.timeStampISO = timeStampISO;
-          userStory.save(function (err, savedUserStory) {
+          userStory.save(function(err, savedUserStory) {
             if (err) {
               res.status(500).send({
                 error: 'Could not create user story, ' + err.message,
@@ -271,7 +350,7 @@ app.post('/project/userStory', function (req, res) {
             } else {
               project.userStoryIds.push(savedUserStory._id);
               project.timeStampISO = timeStampISO;
-              project.save(function (err, savedProject) {
+              project.save(function(err, savedProject) {
                 if (err) {
                   res.status(500).send({
                     error: 'Could not save project, ' + err.message,
@@ -288,12 +367,13 @@ app.post('/project/userStory', function (req, res) {
   );
 });
 
-app.post('/project/userStory/returnUserStoryAndProject', function (req, res) {
+app.post('/project/userStory/returnUserStoryAndProject', function(req, res) {
   var timeStampISO = getTimeStamp();
-  Project.findOne({
+  Project.findOne(
+    {
       _id: req.body.projectId,
     },
-    function (err, project) {
+    function(err, project) {
       if (err) {
         res.status(500).send({
           error: 'Could not create user story, ' + err.message,
@@ -318,7 +398,7 @@ app.post('/project/userStory/returnUserStoryAndProject', function (req, res) {
           userStory.sprint = req.body.sprint;
           userStory.projectId = req.body.projectId;
           userStory.timeStampISO = timeStampISO;
-          userStory.save(function (err, savedUserStory) {
+          userStory.save(function(err, savedUserStory) {
             if (err) {
               res.status(500).send({
                 error: 'Could not create user story, ' + err.message,
@@ -326,7 +406,7 @@ app.post('/project/userStory/returnUserStoryAndProject', function (req, res) {
             } else {
               project.userStoryIds.push(savedUserStory._id);
               project.timeStampISO = timeStampISO;
-              project.save(function (err, savedProject) {
+              project.save(function(err, savedProject) {
                 if (err) {
                   res.status(500).send({
                     error: 'Could not save project, ' + err.message,
@@ -346,12 +426,13 @@ app.post('/project/userStory/returnUserStoryAndProject', function (req, res) {
   );
 });
 
-app.post('/project/bug', function (req, res) {
+app.post('/project/bug', function(req, res) {
   var timeStampISO = getTimeStamp();
-  Project.findOne({
+  Project.findOne(
+    {
       _id: req.body.projectId,
     },
-    function (err, project) {
+    function(err, project) {
       if (err) {
         res.status(500).send({
           error: 'Could not create bug, ' + err.message,
@@ -377,7 +458,7 @@ app.post('/project/bug', function (req, res) {
           bug.sprint = req.body.sprint;
           bug.projectId = req.body.projectId;
           bug.timeStampISO = timeStampISO;
-          bug.save(function (err, savedBug) {
+          bug.save(function(err, savedBug) {
             if (err) {
               res.status(500).send({
                 error: 'Could not create bug, ' + err.message,
@@ -385,7 +466,7 @@ app.post('/project/bug', function (req, res) {
             } else {
               project.bugIds.push(savedBug._id);
               project.timeStampISO = timeStampISO;
-              project.save(function (err, savedProject) {
+              project.save(function(err, savedProject) {
                 if (err) {
                   res.status(500).send({
                     error: 'Could not save project, ' + err.message,
@@ -402,12 +483,13 @@ app.post('/project/bug', function (req, res) {
   );
 });
 
-app.post('/project/bug/returnBugAndProject', function (req, res) {
+app.post('/project/bug/returnBugAndProject', function(req, res) {
   var timeStampISO = getTimeStamp();
-  Project.findOne({
+  Project.findOne(
+    {
       _id: req.body.projectId,
     },
-    function (err, project) {
+    function(err, project) {
       if (err) {
         res.status(500).send({
           error: 'Could not create bug, ' + err.message,
@@ -433,7 +515,7 @@ app.post('/project/bug/returnBugAndProject', function (req, res) {
           bug.sprint = req.body.sprint;
           bug.projectId = req.body.projectId;
           bug.timeStampISO = timeStampISO;
-          bug.save(function (err, savedBug) {
+          bug.save(function(err, savedBug) {
             if (err) {
               res.status(500).send({
                 error: 'Could not create bug, ' + err.message,
@@ -441,7 +523,7 @@ app.post('/project/bug/returnBugAndProject', function (req, res) {
             } else {
               project.bugIds.push(savedBug._id);
               project.timeStampISO = timeStampISO;
-              project.save(function (err, savedProject) {
+              project.save(function(err, savedProject) {
                 if (err) {
                   res.status(500).send({
                     error: 'Could not save project, ' + err.message,
@@ -467,17 +549,18 @@ app.post('/project/bug/returnBugAndProject', function (req, res) {
 // complex JSON based search parameters.  These routes have the form /get/...
 // ==================================================================
 
-app.get('/timestamp', function (req, res) {
+app.get('/timestamp', function(req, res) {
   var timeStampISO = getTimeStamp();
   res.status(200).send(timeStampISO);
 });
 
-app.post('/get/developer', function (req, res) {
-  Developer.findOne({
+app.post('/get/developer', function(req, res) {
+  Developer.findOne(
+    {
       email: req.body.email,
       password: req.body.password,
     },
-    function (err, developer) {
+    function(err, developer) {
       if (err) {
         res.status(500).send({
           error: 'Could not get developer, ' + err.message,
@@ -495,11 +578,12 @@ app.post('/get/developer', function (req, res) {
   );
 });
 
-app.post('/get/project', function (req, res) {
-  Project.findOne({
+app.post('/get/project', function(req, res) {
+  Project.findOne(
+    {
       _id: req.body.projectId,
     },
-    function (err, project) {
+    function(err, project) {
       if (err) {
         res.status(500).send({
           error: 'Could not get project, ' + err.message,
@@ -517,13 +601,14 @@ app.post('/get/project', function (req, res) {
   );
 });
 
-app.post('/get/projects', function (req, res) {
-  Project.find({
+app.post('/get/projects', function(req, res) {
+  Project.find(
+    {
       _id: {
-        $in: req.body.projectIds
+        $in: req.body.projectIds,
       },
     },
-    function (err, projects) {
+    function(err, projects) {
       if (err) {
         res.status(500).send({
           error: 'Could not get projects, ' + err.message,
@@ -541,11 +626,12 @@ app.post('/get/projects', function (req, res) {
   );
 });
 
-app.post('/get/bug', function (req, res) {
-  Bug.findOne({
+app.post('/get/bug', function(req, res) {
+  Bug.findOne(
+    {
       _id: req.body.bugId,
     },
-    function (err, bug) {
+    function(err, bug) {
       if (err) {
         res.status(500).send({
           error: 'Could not get bug, ' + err.message,
@@ -563,11 +649,12 @@ app.post('/get/bug', function (req, res) {
   );
 });
 
-app.post('/get/userStory', function (req, res) {
-  UserStory.findOne({
+app.post('/get/userStory', function(req, res) {
+  UserStory.findOne(
+    {
       _id: req.body.userStoryId,
     },
-    function (err, userStory) {
+    function(err, userStory) {
       if (err) {
         res.status(500).send({
           error: 'Could not get user story, ' + err.message,
@@ -585,13 +672,14 @@ app.post('/get/userStory', function (req, res) {
   );
 });
 
-app.post('/get/userStorys', function (req, res) {
-  UserStory.find({
+app.post('/get/userStorys', function(req, res) {
+  UserStory.find(
+    {
       _id: {
-        $in: req.body.userStoryIds
+        $in: req.body.userStoryIds,
       },
     },
-    function (err, userStories) {
+    function(err, userStories) {
       if (err) {
         res.status(500).send({
           error: 'Could not get user stories, ' + err.message,
@@ -609,13 +697,14 @@ app.post('/get/userStorys', function (req, res) {
   );
 });
 
-app.post('/get/bugs', function (req, res) {
-  Bug.find({
+app.post('/get/bugs', function(req, res) {
+  Bug.find(
+    {
       _id: {
-        $in: req.body.bugIds
+        $in: req.body.bugIds,
       },
     },
-    function (err, bugs) {
+    function(err, bugs) {
       if (err) {
         res.status(500).send({
           error: 'Could not get bugs, ' + err.message,
@@ -637,11 +726,12 @@ app.post('/get/bugs', function (req, res) {
 // DELETE ROUTES
 // ==================================================================
 
-app.delete('/developer', function (req, res) {
-  Developer.findOneAndDelete({
+app.delete('/developer', function(req, res) {
+  Developer.findOneAndDelete(
+    {
       _id: req.body.developerId,
     },
-    function (err, developer) {
+    function(err, developer) {
       if (err) {
         res.status(500).send({
           error: 'Could not delete developer, ' + err.message,
@@ -661,12 +751,13 @@ app.delete('/developer', function (req, res) {
   );
 });
 
-app.post('/delete/developer/project', function (req, res) {
+app.post('/delete/developer/project', function(req, res) {
   var timeStampISO = getTimeStamp();
-  Project.findOneAndDelete({
+  Project.findOneAndDelete(
+    {
       _id: req.body.projectId,
     },
-    function (err, project) {
+    function(err, project) {
       if (err) {
         res.status(500).send({
           error: 'Could not delete project, ' + err.message,
@@ -678,19 +769,21 @@ app.post('/delete/developer/project', function (req, res) {
           });
         } else {
           Developer.findByIdAndUpdate(
-            req.body.developerId, {
+            req.body.developerId,
+            {
               $pull: {
                 projectIds: mongoose.Types.ObjectId(req.body.projectId),
               },
               $set: {
-                timeStampISO: timeStampISO
+                timeStampISO: timeStampISO,
               },
-            }, {
+            },
+            {
               new: true,
               safe: true,
               upsert: true,
             },
-            function (err, SavedDeveloper) {
+            function(err, SavedDeveloper) {
               if (err) {
                 res.status(500).send({
                   error: 'Could not remove project from developer',
@@ -706,12 +799,13 @@ app.post('/delete/developer/project', function (req, res) {
   );
 });
 
-app.post('/delete/project/userStory', function (req, res) {
+app.post('/delete/project/userStory', function(req, res) {
   var timeStampISO = getTimeStamp();
-  UserStory.findOneAndDelete({
+  UserStory.findOneAndDelete(
+    {
       _id: req.body.userStoryId,
     },
-    function (err, userStory) {
+    function(err, userStory) {
       if (err) {
         res.status(500).send({
           error: 'Could not delete user story, ' + err.message,
@@ -723,19 +817,21 @@ app.post('/delete/project/userStory', function (req, res) {
           });
         } else {
           Project.findByIdAndUpdate(
-            req.body.projectId, {
+            req.body.projectId,
+            {
               $pull: {
                 userStoryIds: mongoose.Types.ObjectId(req.body.userStoryId),
               },
               $set: {
-                timeStampISO: timeStampISO
+                timeStampISO: timeStampISO,
               },
-            }, {
+            },
+            {
               new: true,
               safe: true,
               upsert: true,
             },
-            function (err, SavedProject) {
+            function(err, SavedProject) {
               if (err) {
                 res.status(500).send({
                   error: 'Could not remove user story from project',
@@ -751,12 +847,13 @@ app.post('/delete/project/userStory', function (req, res) {
   );
 });
 
-app.post('/delete/project/bug', function (req, res) {
+app.post('/delete/project/bug', function(req, res) {
   var timeStampISO = getTimeStamp();
-  Bug.findOneAndDelete({
+  Bug.findOneAndDelete(
+    {
       _id: req.body.bugId,
     },
-    function (err, bug) {
+    function(err, bug) {
       if (err) {
         res.status(500).send({
           error: 'Could not delete bug, ' + err.message,
@@ -768,19 +865,21 @@ app.post('/delete/project/bug', function (req, res) {
           });
         } else {
           Project.findByIdAndUpdate(
-            req.body.projectId, {
+            req.body.projectId,
+            {
               $pull: {
                 bugIds: mongoose.Types.ObjectId(req.body.bugId),
               },
               $set: {
-                timeStampISO: timeStampISO
+                timeStampISO: timeStampISO,
               },
-            }, {
+            },
+            {
               new: true,
               safe: true,
               upsert: true,
             },
-            function (err, SavedProject) {
+            function(err, SavedProject) {
               if (err) {
                 res.status(500).send({
                   error: 'Could not remove bug from project',
@@ -797,14 +896,15 @@ app.post('/delete/project/bug', function (req, res) {
   );
 });
 
-app.post('/delete/project/userStorys', function (req, res) {
+app.post('/delete/project/userStorys', function(req, res) {
   var timeStampISO = getTimeStamp();
-  UserStory.deleteMany({
+  UserStory.deleteMany(
+    {
       _id: {
-        $in: req.body.userStoryIds
+        $in: req.body.userStoryIds,
       },
     },
-    function (err, userStories) {
+    function(err, userStories) {
       if (err) {
         res.status(500).send({
           error: 'Could not get user stories, ' + err.message,
@@ -824,14 +924,15 @@ app.post('/delete/project/userStorys', function (req, res) {
   );
 });
 
-app.post('/delete/project/bugs', function (req, res) {
+app.post('/delete/project/bugs', function(req, res) {
   var timeStampISO = getTimeStamp();
-  Bug.deleteMany({
+  Bug.deleteMany(
+    {
       _id: {
-        $in: req.body.bugIds
+        $in: req.body.bugIds,
       },
     },
-    function (err, bugs) {
+    function(err, bugs) {
       if (err) {
         res.status(500).send({
           error: 'Could not get bugs, ' + err.message,
@@ -855,12 +956,13 @@ app.post('/delete/project/bugs', function (req, res) {
 // PUT ROUTES
 // ==================================================================
 
-app.post('/put/userStory', function (req, res) {
+app.post('/put/userStory', function(req, res) {
   var timeStampISO = getTimeStamp();
-  UserStory.findOne({
+  UserStory.findOne(
+    {
       _id: req.body.userStoryId,
     },
-    function (err, userStory) {
+    function(err, userStory) {
       if (err) {
         res.status(500).send({
           error: 'Could not update user story, ' + err.message,
@@ -888,7 +990,7 @@ app.post('/put/userStory', function (req, res) {
             userStory.priority = req.body.priority;
             userStory.sprint = req.body.sprint;
             userStory.timeStampISO = timeStampISO;
-            userStory.save(function (err, savedUserStory) {
+            userStory.save(function(err, savedUserStory) {
               if (err) {
                 res.status(500).send({
                   error: 'Could not save user story, ' + err.message,
@@ -904,12 +1006,13 @@ app.post('/put/userStory', function (req, res) {
   );
 });
 
-app.post('/put/userStory/returnUserStoryAndProject', function (req, res) {
+app.post('/put/userStory/returnUserStoryAndProject', function(req, res) {
   var timeStampISO = getTimeStamp();
-  UserStory.findOne({
+  UserStory.findOne(
+    {
       _id: req.body.userStoryId,
     },
-    function (err, userStory) {
+    function(err, userStory) {
       if (err) {
         res.status(500).send({
           error: 'Could not update user story, ' + err.message,
@@ -937,16 +1040,17 @@ app.post('/put/userStory/returnUserStoryAndProject', function (req, res) {
             userStory.priority = req.body.priority;
             userStory.sprint = req.body.sprint;
             userStory.timeStampISO = timeStampISO;
-            userStory.save(function (err, savedUserStory) {
+            userStory.save(function(err, savedUserStory) {
               if (err) {
                 res.status(500).send({
                   error: 'Could not save user story, ' + err.message,
                 });
               } else {
-                Project.findOne({
+                Project.findOne(
+                  {
                     _id: req.body.projectId,
                   },
-                  function (err, project) {
+                  function(err, project) {
                     if (err) {
                       res.status(500).send({
                         error: 'Could not update project, ' + err.message,
@@ -963,7 +1067,7 @@ app.post('/put/userStory/returnUserStoryAndProject', function (req, res) {
                           });
                         } else {
                           project.timeStampISO = timeStampISO;
-                          project.save(function (err, savedProject) {
+                          project.save(function(err, savedProject) {
                             if (err) {
                               res.status(500).send({
                                 error: 'Could not save project, ' + err.message,
@@ -989,12 +1093,13 @@ app.post('/put/userStory/returnUserStoryAndProject', function (req, res) {
   );
 });
 
-app.post('/put/bug', function (req, res) {
+app.post('/put/bug', function(req, res) {
   var timeStampISO = getTimeStamp();
-  Bug.findOne({
+  Bug.findOne(
+    {
       _id: req.body.bugId,
     },
-    function (err, bug) {
+    function(err, bug) {
       if (err) {
         res.status(500).send({
           error: 'Could not update user story, ' + err.message,
@@ -1024,7 +1129,7 @@ app.post('/put/bug', function (req, res) {
             bug.priority = req.body.priority;
             bug.sprint = req.body.sprint;
             bug.timeStampISO = timeStampISO;
-            bug.save(function (err, savedBug) {
+            bug.save(function(err, savedBug) {
               if (err) {
                 res.status(500).send({
                   error: 'Could not save bug, ' + err.message,
@@ -1040,12 +1145,13 @@ app.post('/put/bug', function (req, res) {
   );
 });
 
-app.post('/put/bug/returnBugAndProject', function (req, res) {
+app.post('/put/bug/returnBugAndProject', function(req, res) {
   var timeStampISO = getTimeStamp();
-  Bug.findOne({
+  Bug.findOne(
+    {
       _id: req.body.bugId,
     },
-    function (err, bug) {
+    function(err, bug) {
       if (err) {
         res.status(500).send({
           error: 'Could not update bug, ' + err.message,
@@ -1075,16 +1181,17 @@ app.post('/put/bug/returnBugAndProject', function (req, res) {
             bug.priority = req.body.priority;
             bug.sprint = req.body.sprint;
             bug.timeStampISO = timeStampISO;
-            bug.save(function (err, savedBug) {
+            bug.save(function(err, savedBug) {
               if (err) {
                 res.status(500).send({
                   error: 'Could not save bug, ' + err.message,
                 });
               } else {
-                Project.findOne({
+                Project.findOne(
+                  {
                     _id: req.body.projectId,
                   },
-                  function (err, project) {
+                  function(err, project) {
                     if (err) {
                       res.status(500).send({
                         error: 'Could not update project, ' + err.message,
@@ -1101,7 +1208,7 @@ app.post('/put/bug/returnBugAndProject', function (req, res) {
                           });
                         } else {
                           project.timeStampISO = timeStampISO;
-                          project.save(function (err, savedProject) {
+                          project.save(function(err, savedProject) {
                             if (err) {
                               res.status(500).send({
                                 error: 'Could not save project, ' + err.message,
@@ -1127,12 +1234,13 @@ app.post('/put/bug/returnBugAndProject', function (req, res) {
   );
 });
 
-app.post('/put/project', function (req, res) {
+app.post('/put/project', function(req, res) {
   var timeStampISO = getTimeStamp();
-  Project.findOne({
+  Project.findOne(
+    {
       _id: req.body.projectId,
     },
-    function (err, project) {
+    function(err, project) {
       if (err) {
         res.status(500).send({
           error: 'Could not update project, ' + err.message,
@@ -1151,7 +1259,7 @@ app.post('/put/project', function (req, res) {
             project.name = req.body.name;
             project.description = req.body.description;
             project.timeStampISO = timeStampISO;
-            project.save(function (err, savedProject) {
+            project.save(function(err, savedProject) {
               if (err) {
                 res.status(500).send({
                   error: 'Could not save project, ' + err.message,
@@ -1167,12 +1275,13 @@ app.post('/put/project', function (req, res) {
   );
 });
 
-app.post('/put/project/returnProjectAndDeveloper', function (req, res) {
+app.post('/put/project/returnProjectAndDeveloper', function(req, res) {
   var timeStampISO = getTimeStamp();
-  Project.findOne({
+  Project.findOne(
+    {
       _id: req.body.projectId,
     },
-    function (err, project) {
+    function(err, project) {
       if (err) {
         res.status(500).send({
           error: 'Could not update project, ' + err.message,
@@ -1191,16 +1300,17 @@ app.post('/put/project/returnProjectAndDeveloper', function (req, res) {
             project.name = req.body.name;
             project.description = req.body.description;
             project.timeStampISO = timeStampISO;
-            project.save(function (err, savedProject) {
+            project.save(function(err, savedProject) {
               if (err) {
                 res.status(500).send({
                   error: 'Could not save project, ' + err.message,
                 });
               } else {
-                Developer.findOne({
+                Developer.findOne(
+                  {
                     _id: req.body.developerId,
                   },
-                  function (err, developer) {
+                  function(err, developer) {
                     if (err) {
                       res.status(500).send({
                         error: 'Could not update developer, ' + err.message,
@@ -1208,7 +1318,8 @@ app.post('/put/project/returnProjectAndDeveloper', function (req, res) {
                     } else {
                       if (developer === null) {
                         res.status(500).send({
-                          error: 'Could not update developer, developer not found',
+                          error:
+                            'Could not update developer, developer not found',
                         });
                       } else {
                         if (err) {
@@ -1217,10 +1328,11 @@ app.post('/put/project/returnProjectAndDeveloper', function (req, res) {
                           });
                         } else {
                           developer.timeStampISO = timeStampISO;
-                          developer.save(function (err, savedDeveloper) {
+                          developer.save(function(err, savedDeveloper) {
                             if (err) {
                               res.status(500).send({
-                                error: 'Could not save developer, ' + err.message,
+                                error:
+                                  'Could not save developer, ' + err.message,
                               });
                             } else {
                               res.status(200).send({
@@ -1243,12 +1355,13 @@ app.post('/put/project/returnProjectAndDeveloper', function (req, res) {
   );
 });
 
-app.post('/put/developer', function (req, res) {
+app.post('/put/developer', function(req, res) {
   var timeStampISO = getTimeStamp();
-  Developer.findOne({
+  Developer.findOne(
+    {
       _id: req.body.developerId,
     },
-    function (err, developer) {
+    function(err, developer) {
       if (err) {
         res.status(500).send({
           error: 'Could not update developer, ' + err.message,
@@ -1271,7 +1384,7 @@ app.post('/put/developer', function (req, res) {
             developer.bio = req.body.bio;
             developer.role = req.body.role;
             developer.timeStampISO = timeStampISO;
-            developer.save(function (err, savedDeveloper) {
+            developer.save(function(err, savedDeveloper) {
               if (err) {
                 res.status(500).send({
                   error: 'Could not save developer, ' + err.message,
@@ -1291,25 +1404,25 @@ app.post('/put/developer', function (req, res) {
 // NO ROUTES FOUND
 // ==================================================================
 
-app.post('*', function (req, res) {
+app.post('*', function(req, res) {
   res.status(500).send({
     error: 'That route does not exist',
   });
 });
 
-app.get('*', function (req, res) {
+app.get('*', function(req, res) {
   res.status(500).send({
     error: 'That route does not exist',
   });
 });
 
-app.delete('*', function (req, res) {
+app.delete('*', function(req, res) {
   res.status(500).send({
     error: 'That route does not exist',
   });
 });
 
-app.put('*', function (req, res) {
+app.put('*', function(req, res) {
   res.status(500).send({
     error: 'That route does not exist',
   });
@@ -1319,6 +1432,6 @@ app.put('*', function (req, res) {
 // END OF ROUTES
 // ==================================================================
 
-app.listen(process.env.PORT, process.env.IP, function () {
+app.listen(process.env.PORT, process.env.IP, function() {
   console.log('My Agile Story running on port ' + process.env.PORT + '...');
 });
