@@ -5,15 +5,17 @@
 // NODE_ENVIRONMENT=production or development
 // PORT=****
 // MONGO_USER=****
-// MONGO_PASWORD=****
+// MONGO_PASSWORD=****
 // ==================================================================
 require('dotenv').config();
+var fs = require('fs');
 
 const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const validator = require('validator');
+const bcrypt = require('bcrypt');
 
 //Allow all reqs from all domains & localhost
 app.all('/*', function (req, res, next) {
@@ -22,7 +24,7 @@ app.all('/*', function (req, res, next) {
     'Access-Control-Allow-Headers',
     'X-Requested-With, Content-Type, Accept'
   );
-  res.header('Access-Control-Allow-Methods', 'POST, GET');
+  res.header('Access-Control-Allow-Methods', 'POST');
   next();
 });
 
@@ -47,7 +49,7 @@ if (process.env.NODE_ENVIRONMENT === 'production') {
       'mongodb+srv://' +
       process.env.MONGO_USER +
       ':' +
-      process.env.MONGO_PASWORD +
+      process.env.MONGO_PASSWORD +
       '@cluster0-yxay5.mongodb.net/test?retryWrites=true&w=majority', {
         useNewUrlParser: true,
         useCreateIndex: true,
@@ -89,10 +91,32 @@ function getTimeStamp() {
 }
 
 // ==================================================================
-// POST ROUTES
+// hashing functions for password
 // ==================================================================
 
-notAllowed = ['sex', 'porn', 'https', 'http', 'www.'];
+function hashPassword(password) {
+  bcrypt.hash(password, 10, function (err, hash) {
+    if (hash) {
+      console.log(hash);
+    } else {
+      console.log(err);
+    }
+  });
+}
+
+// ==================================================================
+// validation
+// ==================================================================
+
+notAllowed = [];
+
+fs.readFile('bannedwords.txt', 'utf8', function (err, data) {
+  if (err) throw err;
+  let mystring = data.split("\n")
+  for (let i = 0; i < mystring.length; i++) {
+    notAllowed.push(mystring[i])
+  }
+});
 
 function containsBlackListedStuff(myString) {
   if (myString === '') return false;
@@ -101,13 +125,15 @@ function containsBlackListedStuff(myString) {
   for (let i = 0; i < myString.length; i++) {
     charNotValid = true;
     let myASCIINumb = myString.charCodeAt(i);
-    if (myASCIINumb >= 32 && myASCIINumb <= 33) charNotValid = false;
-    if (myASCIINumb >= 35 && myASCIINumb <= 36) charNotValid = false;
+    if (myASCIINumb >= 32 && myASCIINumb <= 39) charNotValid = false;
     if (myASCIINumb >= 48 && myASCIINumb <= 57) charNotValid = false;
     if (myASCIINumb >= 65 && myASCIINumb <= 90) charNotValid = false;
     if (myASCIINumb >= 97 && myASCIINumb <= 122) charNotValid = false;
+    if (myASCIINumb === 44) charNotValid = false;
     if (myASCIINumb === 46) charNotValid = false;
     if (myASCIINumb === 63) charNotValid = false;
+    if (myASCIINumb === 13) charNotValid = false;
+    if (myASCIINumb === 10) charNotValid = false;
     if (charNotValid) {
       break;
     }
@@ -124,45 +150,65 @@ function containsBlackListedStuff(myString) {
   return false;
 }
 
-app.post('/developer', function (req, res) {
-  // first validate all entries if wrong send back error
-  let validationFailed = false;
-  let validationFailureReason = '';
+function validateInputs(req) {
+  let validationResult = {
+    pass: true,
+    message: 'success',
+  };
 
   if (!validator.isEmail(req.body.email.toLowerCase())) {
-    validationFailed = true;
-    validationFailureReason = 'This is not a valid email address.';
+    validationResult.pass = false;
+    validationResult.message = 'This is not a valid email address.';
   }
 
   if (containsBlackListedStuff(req.body.password)) {
-    validationFailed = true;
-    validationFailureReason = 'This is not a valid password.';
+    validationResult.pass = false;
+    validationResult.message = 'This is not a valid password.';
+  }
+
+  if (req.body.oldPassword) {
+    if (containsBlackListedStuff(req.body.oldPassword)) {
+      validationResult.pass = false;
+      validationResult.message = 'This is not a valid password.';
+    }
   }
 
   if (containsBlackListedStuff(req.body.firstName)) {
-    validationFailed = true;
-    validationFailureReason = 'This is not a valid first name.';
+    validationResult.pass = false;
+    validationResult.message = 'This is not a valid first name.';
   }
 
   if (containsBlackListedStuff(req.body.lastName)) {
-    validationFailed = true;
-    validationFailureReason = 'This is not a valid last name.';
+    validationResult.pass = false;
+    validationResult.message = 'This is not a valid last name.';
   }
 
   if (containsBlackListedStuff(req.body.bio)) {
-    validationFailed = true;
-    validationFailureReason = 'This is not a valid bio.';
+    validationResult.pass = false;
+    validationResult.message = 'This is not a valid bio.';
   }
 
   if (containsBlackListedStuff(req.body.role)) {
-    validationFailed = true;
-    validationFailureReason = 'This is not valid role.';
+    validationResult.pass = false;
+    validationResult.message = 'This is not valid role.';
   }
 
-  if (validationFailed) {
+  if (!validationResult.pass)
+    validationResult.message +=
+    '  Valid characters are alpha numeric, period, space, return, linefeed, ? ! $ #.';
+
+  return validationResult;
+}
+
+// ==================================================================
+// POST ROUTES
+// ==================================================================
+
+app.post('/developer', function (req, res) {
+  const validationResult = validateInputs(req);
+  if (!validationResult.pass) {
     res.status(500).send({
-      error: validationFailureReason +
-        '  Valid characters are alpha numeric, period, space, ? ! $ #.',
+      error: validationResult.message,
     });
   } else {
     //first check if develop exists if so return and error
@@ -172,35 +218,40 @@ app.post('/developer', function (req, res) {
       },
       function (err, developerInDatabase) {
         if (err) {
-          // res.render('home.ejs', {statusMessage: "Could not create developer, " + err.message} )
           res.status(500).send({
             error: 'Could not create developer, ' + err.message,
           });
         } else {
           if (developerInDatabase !== null) {
-            // res.render('home.ejs', {statusMessage: "Could not create developer, already exists."})
             res.status(500).send({
               error: 'Could not create developer, already exists.',
             });
           } else {
             //developer doesn't exist so create a new one
-            var developer = new Developer();
-            developer.email = req.body.email.toLowerCase();
-            developer.password = req.body.password;
-            developer.firstName = req.body.firstName;
-            developer.lastName = req.body.lastName;
-            developer.bio = req.body.bio;
-            developer.role = req.body.role;
-            developer.timeStampISO = timeStampISO;
-            developer.save(function (err, savedDeveloper) {
+            bcrypt.hash(req.body.password, 10, function (err, hash) {
               if (err) {
-                // res.render('home.ejs', {statusMessage: "Could not create developer, " + err.message} )
                 res.status(500).send({
                   error: 'Could not create developer, ' + err.message,
                 });
               } else {
-                // res.render('home.ejs', {statusMessage: "Developer created sucessfully!"} )
-                res.status(200).send(savedDeveloper);
+                var developer = new Developer();
+                developer.email = req.body.email.toLowerCase();
+                developer.password = hash;
+                developer.firstName = req.body.firstName;
+                developer.lastName = req.body.lastName;
+                developer.bio = req.body.bio;
+                developer.role = req.body.role;
+                developer.timeStampISO = timeStampISO;
+                developer.save(function (err, savedDeveloper) {
+                  if (err) {
+                    res.status(500).send({
+                      error: 'Could not create developer, ' + err.message,
+                    });
+                  } else {
+                    savedDeveloper.password = '';
+                    res.status(200).send(savedDeveloper);
+                  }
+                });
               }
             });
           }
@@ -545,9 +596,9 @@ app.get('/timestamp', function (req, res) {
 });
 
 app.post('/get/developer', function (req, res) {
+  //hashPassword(req.body.password);
   Developer.findOne({
       email: req.body.email,
-      password: req.body.password,
     },
     function (err, developer) {
       if (err) {
@@ -560,7 +611,25 @@ app.post('/get/developer', function (req, res) {
             error: 'Could not get developer, not found',
           });
         } else {
-          res.status(200).send(developer);
+          bcrypt.compare(req.body.password, developer.password, function (
+            err,
+            resBcrypt
+          ) {
+            if (err) {
+              res.status(500).send({
+                error: 'Could not get developer' + err.message,
+              });
+            } else {
+              if (resBcrypt) {
+                developer.password = '';
+                res.status(200).send(developer);
+              } else {
+                res.status(500).send({
+                  error: 'Could not get developer',
+                });
+              }
+            }
+          });
         }
       }
     }
@@ -1315,47 +1384,152 @@ app.post('/put/project/returnProjectAndDeveloper', function (req, res) {
 });
 
 app.post('/put/developer', function (req, res) {
-  var timeStampISO = getTimeStamp();
-  Developer.findOne({
-      _id: req.body.developerId,
-    },
-    function (err, developer) {
-      if (err) {
-        res.status(500).send({
-          error: 'Could not update developer, ' + err.message,
-        });
-      } else {
-        if (developer === null) {
+  const validationResult = validateInputs(req);
+  if (!validationResult.pass) {
+    res.status(500).send({
+      error: validationResult.message,
+    });
+  } else {
+    var timeStampISO = getTimeStamp();
+    Developer.findOne({
+        _id: req.body.developerId,
+      },
+      function (err, developer) {
+        if (err) {
           res.status(500).send({
-            error: 'Could not update developer, developer not found',
+            error: 'Could not update developer, ' + err.message,
           });
         } else {
-          if (err) {
+          if (developer === null) {
             res.status(500).send({
-              error: 'Could not update developer, ' + err.message,
+              error: 'Could not update developer, developer not found',
             });
           } else {
-            developer.firstName = req.body.firstName;
-            developer.lastName = req.body.lastName;
-            developer.email = req.body.email;
-            developer.password = req.body.password;
-            developer.bio = req.body.bio;
-            developer.role = req.body.role;
-            developer.timeStampISO = timeStampISO;
-            developer.save(function (err, savedDeveloper) {
-              if (err) {
-                res.status(500).send({
-                  error: 'Could not save developer, ' + err.message,
-                });
-              } else {
-                res.status(200).send(savedDeveloper);
-              }
-            });
+            if (err) {
+              res.status(500).send({
+                error: 'Could not update developer, ' + err.message,
+              });
+            } else {
+              bcrypt.compare(req.body.password, developer.password, function (
+                err,
+                resBcrypt
+              ) {
+                if (err) {
+                  res.status(500).send({
+                    error: 'Could not update developer' + err.message,
+                  });
+                } else {
+                  if (resBcrypt) {
+                    bcrypt.hash(req.body.password, 10, function (err, hash) {
+                      if (err) {
+                        res.status(500).send({
+                          error: 'Could not update developer, ' + err.message,
+                        });
+                      } else {
+                        developer.firstName = req.body.firstName;
+                        developer.lastName = req.body.lastName;
+                        developer.email = req.body.email;
+                        developer.password = hash;
+                        developer.bio = req.body.bio;
+                        developer.role = req.body.role;
+                        developer.timeStampISO = timeStampISO;
+                        developer.save(function (err, savedDeveloper) {
+                          if (err) {
+                            res.status(500).send({
+                              error: 'Could not update developer, ' + err.message,
+                            });
+                          } else {
+                            savedDeveloper.password = '';
+                            res.status(200).send(savedDeveloper);
+                          }
+                        });
+                      }
+                    });
+                  } else {
+                    res.status(500).send({
+                      error: 'Could not update developer password incorrect',
+                    });
+                  }
+                }
+              });
+            }
           }
         }
       }
-    }
-  );
+    );
+  }
+});
+
+app.post('/put/developer/changePassword', function (req, res) {
+  const validationResult = validateInputs(req);
+  if (!validationResult.pass) {
+    res.status(500).send({
+      error: validationResult.message,
+    });
+  } else {
+    var timeStampISO = getTimeStamp();
+    Developer.findOne({
+        _id: req.body.developerId,
+      },
+      function (err, developer) {
+        if (err) {
+          res.status(500).send({
+            error: 'Could not update developer, ' + err.message,
+          });
+        } else {
+          if (developer === null) {
+            res.status(500).send({
+              error: 'Could not update developer, developer not found',
+            });
+          } else {
+            if (err) {
+              res.status(500).send({
+                error: 'Could not update developer, ' + err.message,
+              });
+            } else {
+              bcrypt.compare(req.body.oldPassword, developer.password, function (
+                err,
+                resBcrypt
+              ) {
+                if (err) {
+                  res.status(500).send({
+                    error: 'Could not update developer' + err.message,
+                  });
+                } else {
+                  if (resBcrypt) {
+                    bcrypt.hash(req.body.password, 10, function (err, hash) {
+                      if (err) {
+                        res.status(500).send({
+                          error: 'Could not update developer, ' + err.message,
+                        });
+                      } else {
+                        developer.password = hash;
+                        developer.timeStampISO = timeStampISO;
+                        developer.save(function (err, savedDeveloper) {
+                          if (err) {
+                            res.status(500).send({
+                              error: 'Could not update developer, ' + err.message,
+                            });
+                          } else {
+                            savedDeveloper.password = '';
+                            res.status(200).send(savedDeveloper);
+                          }
+                        });
+                      }
+                    });
+                  } else {
+                    res.status(500).send({
+                      error: 'Could not update developer password incorrect',
+                    });
+                  }
+                }
+              });
+            }
+          }
+        }
+      }
+    );
+  }
 });
 
 // ==================================================================
