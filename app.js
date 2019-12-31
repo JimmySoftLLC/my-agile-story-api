@@ -6,16 +6,18 @@
 // PORT=****
 // MONGO_USER=****
 // MONGO_PASSWORD=****
+// JWT_SECRET=****
 // ==================================================================
 require('dotenv').config();
-var fs = require('fs');
 
 const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
-const validator = require('validator');
-const bcrypt = require('bcrypt');
+let setUpDatabase = require('./db');
+let developer = require('./api/developerAPI');
+let project = require('./api/projectAPI');
+let getTimeStamp = require('./api/getTimeStamp');
 
 //Allow all reqs from all domains & localhost
 app.all('/*', function (req, res, next) {
@@ -39,321 +41,26 @@ app.set('view engine', 'ejs');
 
 mongoose.set('useFindAndModify', false);
 
-// ==================================================================
-// DATABASE
-// ==================================================================
+setUpDatabase(mongoose);
 
-if (process.env.NODE_ENVIRONMENT === 'production') {
-  const db = mongoose
-    .connect(
-      'mongodb+srv://' +
-      process.env.MONGO_USER +
-      ':' +
-      process.env.MONGO_PASSWORD +
-      '@cluster0-yxay5.mongodb.net/test?retryWrites=true&w=majority', {
-        useNewUrlParser: true,
-        useCreateIndex: true,
-      }
-    )
-    .then(() => {
-      dataBaseErrorMessage = 'Connected to DB';
-      console.log('Connected to DB');
-    })
-    .catch(err => {
-      dataBaseErrorMessage = 'ERROR:' + err.message;
-      console.log('ERROR:', err.message);
-    });
-} else {
-  const db = mongoose
-    .connect('mongodb://localhost/my-agile-story-api', {
-      useNewUrlParser: true,
-      useCreateIndex: true,
-    })
-    .then(() => {
-      console.log('Connected to DB');
-    })
-    .catch(err => {
-      console.log('ERROR:', err.message);
-    });
-}
-
-var Developer = require('./model/developer');
 var Project = require('./model/project');
 var UserStory = require('./model/user-story');
 var Bug = require('./model/bug');
-
-// ==================================================================
-// Each record is marked with a unique timestamp to keep clients synchronized
-// ==================================================================
-function getTimeStamp() {
-  var timeStampISO = new Date().toISOString();
-  return timeStampISO;
-}
-
-// ==================================================================
-// hashing functions for password
-// ==================================================================
-
-function hashPassword(password) {
-  bcrypt.hash(password, 10, function (err, hash) {
-    if (hash) {
-      console.log(hash);
-    } else {
-      console.log(err);
-    }
-  });
-}
-
-// ==================================================================
-// validation
-// ==================================================================
-
-notAllowed = [];
-
-fs.readFile('bannedwords.txt', 'utf8', function (err, data) {
-  if (err) throw err;
-  let mystring = data.split("\n")
-  for (let i = 0; i < mystring.length; i++) {
-    notAllowed.push(mystring[i])
-  }
-});
-
-function containsBlackListedStuff(myString) {
-  if (myString === '') return false;
-  // first check alpha numeric or . ? , space ! $ # are only in string
-  let charNotValid = true;
-  for (let i = 0; i < myString.length; i++) {
-    charNotValid = true;
-    let myASCIINumb = myString.charCodeAt(i);
-    if (myASCIINumb >= 32 && myASCIINumb <= 39) charNotValid = false;
-    if (myASCIINumb >= 48 && myASCIINumb <= 57) charNotValid = false;
-    if (myASCIINumb >= 65 && myASCIINumb <= 90) charNotValid = false;
-    if (myASCIINumb >= 97 && myASCIINumb <= 122) charNotValid = false;
-    if (myASCIINumb === 44) charNotValid = false;
-    if (myASCIINumb === 46) charNotValid = false;
-    if (myASCIINumb === 63) charNotValid = false;
-    if (myASCIINumb === 13) charNotValid = false;
-    if (myASCIINumb === 10) charNotValid = false;
-    if (charNotValid) {
-      break;
-    }
-  }
-
-  if (charNotValid) return true;
-
-  // now check if bad words are present
-  for (let i = 0; i < notAllowed.length; i++) {
-    if (validator.contains(myString, notAllowed[i])) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function validateInputs(req) {
-  let validationResult = {
-    pass: true,
-    message: 'success',
-  };
-
-  if (!validator.isEmail(req.body.email.toLowerCase())) {
-    validationResult.pass = false;
-    validationResult.message = 'This is not a valid email address.';
-  }
-
-  if (containsBlackListedStuff(req.body.password)) {
-    validationResult.pass = false;
-    validationResult.message = 'This is not a valid password.';
-  }
-
-  if (req.body.oldPassword) {
-    if (containsBlackListedStuff(req.body.oldPassword)) {
-      validationResult.pass = false;
-      validationResult.message = 'This is not a valid password.';
-    }
-  }
-
-  if (containsBlackListedStuff(req.body.firstName)) {
-    validationResult.pass = false;
-    validationResult.message = 'This is not a valid first name.';
-  }
-
-  if (containsBlackListedStuff(req.body.lastName)) {
-    validationResult.pass = false;
-    validationResult.message = 'This is not a valid last name.';
-  }
-
-  if (containsBlackListedStuff(req.body.bio)) {
-    validationResult.pass = false;
-    validationResult.message = 'This is not a valid bio.';
-  }
-
-  if (containsBlackListedStuff(req.body.role)) {
-    validationResult.pass = false;
-    validationResult.message = 'This is not valid role.';
-  }
-
-  if (!validationResult.pass)
-    validationResult.message +=
-    '  Valid characters are alpha numeric, period, space, return, linefeed, ? ! $ #.';
-
-  return validationResult;
-}
 
 // ==================================================================
 // POST ROUTES
 // ==================================================================
 
 app.post('/developer', function (req, res) {
-  const validationResult = validateInputs(req);
-  if (!validationResult.pass) {
-    res.status(500).send({
-      error: validationResult.message,
-    });
-  } else {
-    //first check if develop exists if so return and error
-    var timeStampISO = getTimeStamp();
-    Developer.findOne({
-        email: req.body.email.toLowerCase(),
-      },
-      function (err, developerInDatabase) {
-        if (err) {
-          res.status(500).send({
-            error: 'Could not create developer, ' + err.message,
-          });
-        } else {
-          if (developerInDatabase !== null) {
-            res.status(500).send({
-              error: 'Could not create developer, already exists.',
-            });
-          } else {
-            //developer doesn't exist so create a new one
-            bcrypt.hash(req.body.password, 10, function (err, hash) {
-              if (err) {
-                res.status(500).send({
-                  error: 'Could not create developer, ' + err.message,
-                });
-              } else {
-                var developer = new Developer();
-                developer.email = req.body.email.toLowerCase();
-                developer.password = hash;
-                developer.firstName = req.body.firstName;
-                developer.lastName = req.body.lastName;
-                developer.bio = req.body.bio;
-                developer.role = req.body.role;
-                developer.timeStampISO = timeStampISO;
-                developer.save(function (err, savedDeveloper) {
-                  if (err) {
-                    res.status(500).send({
-                      error: 'Could not create developer, ' + err.message,
-                    });
-                  } else {
-                    savedDeveloper.password = '';
-                    res.status(200).send(savedDeveloper);
-                  }
-                });
-              }
-            });
-          }
-        }
-      }
-    );
-  }
+  developer.post(req, res);
 });
 
 app.post('/developer/project', function (req, res) {
-  var timeStampISO = getTimeStamp();
-  Developer.findOne({
-      _id: req.body.developerId,
-    },
-    function (err, developer) {
-      if (err) {
-        res.status(500).send({
-          error: 'Could not create project, ' + err.message,
-        });
-      } else {
-        if (developer === null) {
-          res.status(500).send({
-            error: 'Could not create project, developer not found',
-          });
-        } else {
-          var project = new Project();
-          project.name = req.body.name;
-          project.description = req.body.description;
-          project.developerIds.push(developer._id);
-          project.timeStampISO = timeStampISO;
-          project.save(function (err, savedProject) {
-            if (err) {
-              res.status(500).send({
-                error: 'Could not create project, ' + err.message,
-              });
-            } else {
-              developer.projectIds.push(savedProject._id);
-              developer.timeStampISO = timeStampISO;
-              developer.save(function (err, savedDeveloper) {
-                if (err) {
-                  res.status(500).send({
-                    error: 'Could not save developer, ' + err.message,
-                  });
-                } else {
-                  res.status(200).send(savedProject);
-                }
-              });
-            }
-          });
-        }
-      }
-    }
-  );
+  project.post(req, res);
 });
 
 app.post('/developer/project/returnProjectAndDeveloper', function (req, res) {
-  var timeStampISO = getTimeStamp();
-  Developer.findOne({
-      _id: req.body.developerId,
-    },
-    function (err, developer) {
-      if (err) {
-        res.status(500).send({
-          error: 'Could not create project, ' + err.message,
-        });
-      } else {
-        if (developer === null) {
-          res.status(500).send({
-            error: 'Could not create project, developer not found',
-          });
-        } else {
-          var project = new Project();
-          project.name = req.body.name;
-          project.description = req.body.description;
-          project.developerIds.push(developer._id);
-          project.timeStampISO = timeStampISO;
-          project.save(function (err, savedProject) {
-            if (err) {
-              res.status(500).send({
-                error: 'Could not create project, ' + err.message,
-              });
-            } else {
-              developer.projectIds.push(savedProject._id);
-              developer.timeStampISO = timeStampISO;
-              developer.save(function (err, savedDeveloper) {
-                if (err) {
-                  res.status(500).send({
-                    error: 'Could not save developer, ' + err.message,
-                  });
-                } else {
-                  res.status(200).send({
-                    project: savedProject,
-                    developer: savedDeveloper,
-                  });
-                }
-              });
-            }
-          });
-        }
-      }
-    }
-  );
+  project.postReturnObjects(req, res);
 });
 
 app.post('/project/userStory', function (req, res) {
@@ -596,112 +303,15 @@ app.get('/timestamp', function (req, res) {
 });
 
 app.post('/get/developer', function (req, res) {
-  //hashPassword(req.body.password);
-  Developer.findOne({
-      email: req.body.email,
-    },
-    function (err, developer) {
-      if (err) {
-        res.status(500).send({
-          error: 'Could not get developer, ' + err.message,
-        });
-      } else {
-        if (developer === null) {
-          res.status(500).send({
-            error: 'Could not get developer, not found',
-          });
-        } else {
-          bcrypt.compare(req.body.password, developer.password, function (
-            err,
-            resBcrypt
-          ) {
-            if (err) {
-              res.status(500).send({
-                error: 'Could not get developer' + err.message,
-              });
-            } else {
-              if (resBcrypt) {
-                developer.password = '';
-                res.status(200).send(developer);
-              } else {
-                res.status(500).send({
-                  error: 'Could not get developer',
-                });
-              }
-            }
-          });
-        }
-      }
-    }
-  );
+  developer.get(req, res);
 });
 
 app.post('/get/project', function (req, res) {
-  Project.findOne({
-      _id: req.body.projectId,
-    },
-    function (err, project) {
-      if (err) {
-        res.status(500).send({
-          error: 'Could not get project, ' + err.message,
-        });
-      } else {
-        if (project === null) {
-          res.status(500).send({
-            error: 'Could not get project, not found',
-          });
-        } else {
-          res.status(200).send(project);
-        }
-      }
-    }
-  );
+  project.get(req, res);
 });
 
 app.post('/get/projects', function (req, res) {
-  Project.find({
-      _id: {
-        $in: req.body.projectIds,
-      },
-    },
-    function (err, projects) {
-      if (err) {
-        res.status(500).send({
-          error: 'Could not get projects, ' + err.message,
-        });
-      } else {
-        if (projects === null) {
-          res.status(500).send({
-            error: 'Could not get projects, not found',
-          });
-        } else {
-          res.status(200).send(projects);
-        }
-      }
-    }
-  );
-});
-
-app.post('/get/bug', function (req, res) {
-  Bug.findOne({
-      _id: req.body.bugId,
-    },
-    function (err, bug) {
-      if (err) {
-        res.status(500).send({
-          error: 'Could not get bug, ' + err.message,
-        });
-      } else {
-        if (bug === null) {
-          res.status(500).send({
-            error: 'Could not get bug, not found',
-          });
-        } else {
-          res.status(200).send(bug);
-        }
-      }
-    }
-  );
+  project.getProjects(req, res);
 });
 
 app.post('/get/userStory', function (req, res) {
@@ -750,6 +360,28 @@ app.post('/get/userStorys', function (req, res) {
   );
 });
 
+app.post('/get/bug', function (req, res) {
+  Bug.findOne({
+      _id: req.body.bugId,
+    },
+    function (err, bug) {
+      if (err) {
+        res.status(500).send({
+          error: 'Could not get bug, ' + err.message,
+        });
+      } else {
+        if (bug === null) {
+          res.status(500).send({
+            error: 'Could not get bug, not found',
+          });
+        } else {
+          res.status(200).send(bug);
+        }
+      }
+    }
+  );
+});
+
 app.post('/get/bugs', function (req, res) {
   Bug.find({
       _id: {
@@ -778,73 +410,12 @@ app.post('/get/bugs', function (req, res) {
 // DELETE ROUTES
 // ==================================================================
 
-app.delete('/developer', function (req, res) {
-  Developer.findOneAndDelete({
-      _id: req.body.developerId,
-    },
-    function (err, developer) {
-      if (err) {
-        res.status(500).send({
-          error: 'Could not delete developer, ' + err.message,
-        });
-      } else {
-        if (developer === null) {
-          res.status(500).send({
-            error: 'Could not delete developer, not found',
-          });
-        } else {
-          res.status(200).send({
-            result: 'Success',
-          });
-        }
-      }
-    }
-  );
+app.post('/developer', function (req, res) {
+  developer.delete(req, res);
 });
 
 app.post('/delete/developer/project', function (req, res) {
-  var timeStampISO = getTimeStamp();
-  Project.findOneAndDelete({
-      _id: req.body.projectId,
-    },
-    function (err, project) {
-      if (err) {
-        res.status(500).send({
-          error: 'Could not delete project, ' + err.message,
-        });
-      } else {
-        if (project === null) {
-          res.status(500).send({
-            error: 'Could not delete project, not found',
-          });
-        } else {
-          Developer.findByIdAndUpdate(
-            req.body.developerId, {
-              $pull: {
-                projectIds: mongoose.Types.ObjectId(req.body.projectId),
-              },
-              $set: {
-                timeStampISO: timeStampISO,
-              },
-            }, {
-              new: true,
-              safe: true,
-              upsert: true,
-            },
-            function (err, SavedDeveloper) {
-              if (err) {
-                res.status(500).send({
-                  error: 'Could not remove project from developer',
-                });
-              } else {
-                res.status(200).send(SavedDeveloper);
-              }
-            }
-          );
-        }
-      }
-    }
-  );
+  project.delete(req, res);
 });
 
 app.post('/delete/project/userStory', function (req, res) {
@@ -886,6 +457,33 @@ app.post('/delete/project/userStory', function (req, res) {
               }
             }
           );
+        }
+      }
+    }
+  );
+});
+
+app.post('/delete/project/userStorys', function (req, res) {
+  var timeStampISO = getTimeStamp();
+  UserStory.deleteMany({
+      _id: {
+        $in: req.body.userStoryIds,
+      },
+    },
+    function (err, userStories) {
+      if (err) {
+        res.status(500).send({
+          error: 'Could not get user stories, ' + err.message,
+        });
+      } else {
+        if (userStories === null) {
+          res.status(500).send({
+            error: 'Could not delete stories, not found',
+          });
+        } else {
+          res.status(200).send({
+            result: 'Success',
+          });
         }
       }
     }
@@ -937,33 +535,6 @@ app.post('/delete/project/bug', function (req, res) {
   );
 });
 
-app.post('/delete/project/userStorys', function (req, res) {
-  var timeStampISO = getTimeStamp();
-  UserStory.deleteMany({
-      _id: {
-        $in: req.body.userStoryIds,
-      },
-    },
-    function (err, userStories) {
-      if (err) {
-        res.status(500).send({
-          error: 'Could not get user stories, ' + err.message,
-        });
-      } else {
-        if (userStories === null) {
-          res.status(500).send({
-            error: 'Could not delete stories, not found',
-          });
-        } else {
-          res.status(200).send({
-            result: 'Success',
-          });
-        }
-      }
-    }
-  );
-});
-
 app.post('/delete/project/bugs', function (req, res) {
   var timeStampISO = getTimeStamp();
   Bug.deleteMany({
@@ -994,6 +565,22 @@ app.post('/delete/project/bugs', function (req, res) {
 // ==================================================================
 // PUT ROUTES
 // ==================================================================
+
+app.post('/put/developer', function (req, res) {
+  developer.put(req, res);
+});
+
+app.post('/put/developer/changePassword', function (req, res) {
+  developer.changePassword(req, res);
+});
+
+app.post('/put/project', function (req, res) {
+  project.put(req, res);
+});
+
+app.post('/put/project/returnProjectAndDeveloper', function (req, res) {
+  project.putReturnProjectDeveloper(req, res);
+});
 
 app.post('/put/userStory', function (req, res) {
   var timeStampISO = getTimeStamp();
@@ -1265,271 +852,6 @@ app.post('/put/bug/returnBugAndProject', function (req, res) {
       }
     }
   );
-});
-
-app.post('/put/project', function (req, res) {
-  var timeStampISO = getTimeStamp();
-  Project.findOne({
-      _id: req.body.projectId,
-    },
-    function (err, project) {
-      if (err) {
-        res.status(500).send({
-          error: 'Could not update project, ' + err.message,
-        });
-      } else {
-        if (project === null) {
-          res.status(500).send({
-            error: 'Could not update project, project not found',
-          });
-        } else {
-          if (err) {
-            res.status(500).send({
-              error: 'Could not update project, ' + err.message,
-            });
-          } else {
-            project.name = req.body.name;
-            project.description = req.body.description;
-            project.timeStampISO = timeStampISO;
-            project.save(function (err, savedProject) {
-              if (err) {
-                res.status(500).send({
-                  error: 'Could not save project, ' + err.message,
-                });
-              } else {
-                res.status(200).send(savedProject);
-              }
-            });
-          }
-        }
-      }
-    }
-  );
-});
-
-app.post('/put/project/returnProjectAndDeveloper', function (req, res) {
-  var timeStampISO = getTimeStamp();
-  Project.findOne({
-      _id: req.body.projectId,
-    },
-    function (err, project) {
-      if (err) {
-        res.status(500).send({
-          error: 'Could not update project, ' + err.message,
-        });
-      } else {
-        if (project === null) {
-          res.status(500).send({
-            error: 'Could not update project, project not found',
-          });
-        } else {
-          if (err) {
-            res.status(500).send({
-              error: 'Could not update project, ' + err.message,
-            });
-          } else {
-            project.name = req.body.name;
-            project.description = req.body.description;
-            project.timeStampISO = timeStampISO;
-            project.save(function (err, savedProject) {
-              if (err) {
-                res.status(500).send({
-                  error: 'Could not save project, ' + err.message,
-                });
-              } else {
-                Developer.findOne({
-                    _id: req.body.developerId,
-                  },
-                  function (err, developer) {
-                    if (err) {
-                      res.status(500).send({
-                        error: 'Could not update developer, ' + err.message,
-                      });
-                    } else {
-                      if (developer === null) {
-                        res.status(500).send({
-                          error: 'Could not update developer, developer not found',
-                        });
-                      } else {
-                        if (err) {
-                          res.status(500).send({
-                            error: 'Could not update developer, ' + err.message,
-                          });
-                        } else {
-                          developer.timeStampISO = timeStampISO;
-                          developer.save(function (err, savedDeveloper) {
-                            if (err) {
-                              res.status(500).send({
-                                error: 'Could not save developer, ' + err.message,
-                              });
-                            } else {
-                              res.status(200).send({
-                                project: savedProject,
-                                developer: savedDeveloper,
-                              });
-                            }
-                          });
-                        }
-                      }
-                    }
-                  }
-                );
-              }
-            });
-          }
-        }
-      }
-    }
-  );
-});
-
-app.post('/put/developer', function (req, res) {
-  const validationResult = validateInputs(req);
-  if (!validationResult.pass) {
-    res.status(500).send({
-      error: validationResult.message,
-    });
-  } else {
-    var timeStampISO = getTimeStamp();
-    Developer.findOne({
-        _id: req.body.developerId,
-      },
-      function (err, developer) {
-        if (err) {
-          res.status(500).send({
-            error: 'Could not update developer, ' + err.message,
-          });
-        } else {
-          if (developer === null) {
-            res.status(500).send({
-              error: 'Could not update developer, developer not found',
-            });
-          } else {
-            if (err) {
-              res.status(500).send({
-                error: 'Could not update developer, ' + err.message,
-              });
-            } else {
-              bcrypt.compare(req.body.password, developer.password, function (
-                err,
-                resBcrypt
-              ) {
-                if (err) {
-                  res.status(500).send({
-                    error: 'Could not update developer' + err.message,
-                  });
-                } else {
-                  if (resBcrypt) {
-                    bcrypt.hash(req.body.password, 10, function (err, hash) {
-                      if (err) {
-                        res.status(500).send({
-                          error: 'Could not update developer, ' + err.message,
-                        });
-                      } else {
-                        developer.firstName = req.body.firstName;
-                        developer.lastName = req.body.lastName;
-                        developer.email = req.body.email;
-                        developer.password = hash;
-                        developer.bio = req.body.bio;
-                        developer.role = req.body.role;
-                        developer.timeStampISO = timeStampISO;
-                        developer.save(function (err, savedDeveloper) {
-                          if (err) {
-                            res.status(500).send({
-                              error: 'Could not update developer, ' + err.message,
-                            });
-                          } else {
-                            savedDeveloper.password = '';
-                            res.status(200).send(savedDeveloper);
-                          }
-                        });
-                      }
-                    });
-                  } else {
-                    res.status(500).send({
-                      error: 'Could not update developer password incorrect',
-                    });
-                  }
-                }
-              });
-            }
-          }
-        }
-      }
-    );
-  }
-});
-
-app.post('/put/developer/changePassword', function (req, res) {
-  const validationResult = validateInputs(req);
-  if (!validationResult.pass) {
-    res.status(500).send({
-      error: validationResult.message,
-    });
-  } else {
-    var timeStampISO = getTimeStamp();
-    Developer.findOne({
-        _id: req.body.developerId,
-      },
-      function (err, developer) {
-        if (err) {
-          res.status(500).send({
-            error: 'Could not update developer, ' + err.message,
-          });
-        } else {
-          if (developer === null) {
-            res.status(500).send({
-              error: 'Could not update developer, developer not found',
-            });
-          } else {
-            if (err) {
-              res.status(500).send({
-                error: 'Could not update developer, ' + err.message,
-              });
-            } else {
-              bcrypt.compare(req.body.oldPassword, developer.password, function (
-                err,
-                resBcrypt
-              ) {
-                if (err) {
-                  res.status(500).send({
-                    error: 'Could not update developer' + err.message,
-                  });
-                } else {
-                  if (resBcrypt) {
-                    bcrypt.hash(req.body.password, 10, function (err, hash) {
-                      if (err) {
-                        res.status(500).send({
-                          error: 'Could not update developer, ' + err.message,
-                        });
-                      } else {
-                        developer.password = hash;
-                        developer.timeStampISO = timeStampISO;
-                        developer.save(function (err, savedDeveloper) {
-                          if (err) {
-                            res.status(500).send({
-                              error: 'Could not update developer, ' + err.message,
-                            });
-                          } else {
-                            savedDeveloper.password = '';
-                            res.status(200).send(savedDeveloper);
-                          }
-                        });
-                      }
-                    });
-                  } else {
-                    res.status(500).send({
-                      error: 'Could not update developer password incorrect',
-                    });
-                  }
-                }
-              });
-            }
-          }
-        }
-      }
-    );
-  }
 });
 
 // ==================================================================
