@@ -7,14 +7,18 @@ var userStorySchema = new Schema({
     userRole: String,
     userWant: String,
     userBenefit: String,
-    acceptanceCriteria: String, 
+    acceptanceCriteria: String,
     conversation: String,
     estimate: Number,
     phase: String,
     percentDone: Number,
     priority: Number,
     sprint: Number,
-    projectId: {type: ObjectId, ref: 'Project'},
+    projectId: {
+        type: ObjectId,
+        ref: 'Project'
+    },
+    votes: [],
     timeStampISO: String,
 });
 

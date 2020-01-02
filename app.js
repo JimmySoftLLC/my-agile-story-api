@@ -176,12 +176,20 @@ app.post('/put/userStory/returnUserStoryAndProject', function (req, res) {
   userStory.putReturnUserStoryProject(req, res);
 });
 
+app.post('/put/userStory/voteReturnUserStoryProject', function (req, res) {
+  userStory.putVoteReturnUserStoryProject(req, res);
+});
+
 app.post('/put/bug', function (req, res) {
   bug.put(req, res);
 });
 
 app.post('/put/bug/returnBugAndProject', function (req, res) {
   bug.putReturnBugProject(req, res);
+});
+
+app.post('/put/bug/voteReturnBugProject', function (req, res) {
+  bug.putVoteReturnBugProject(req, res);
 });
 
 // ==================================================================

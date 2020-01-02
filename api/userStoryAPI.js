@@ -1,8 +1,6 @@
 const mongoose = require('mongoose');
-let Developer = require('../model/developer');
 let Project = require('../model/project');
 var UserStory = require('../model/user-story');
-var Bug = require('../model/bug');
 let getTimeStamp = require('./getTimeStamp');
 
 const post = (req, res) => {
@@ -370,6 +368,87 @@ const putReturnUserStoryProject = (req, res) => {
     );
 };
 
+const putVoteReturnUserStoryProject = (req, res) => {
+    var timeStampISO = getTimeStamp();
+    UserStory.findOne({
+            _id: req.body.userStoryId,
+        },
+        function (err, userStory) {
+            if (err) {
+                res.status(500).send({
+                    error: 'Could not update user story, ' + err.message,
+                });
+            } else {
+                if (userStory === null) {
+                    res.status(500).send({
+                        error: 'Could not update user story, user story not found',
+                    });
+                } else {
+                    if (err) {
+                        res.status(500).send({
+                            error: 'Could not update user story, ' + err.message,
+                        });
+                    } else {
+                        for (let i = 0; i < userStory.votes.length; i++) {
+                            if (userStory.votes[i].developerId === req.body.vote.developerId) {
+                                userStory.votes.splice(i, 1)
+                                break;
+                            }
+                        }
+                        userStory.votes.push(req.body.vote)
+                        userStory.timeStampISO = timeStampISO;
+                        userStory.save(function (err, savedUserStory) {
+                            if (err) {
+                                res.status(500).send({
+                                    error: 'Could not save user story, ' + err.message,
+                                });
+                            } else {
+                                Project.findOne({
+                                        _id: req.body.projectId,
+                                    },
+                                    function (err, project) {
+                                        if (err) {
+                                            res.status(500).send({
+                                                error: 'Could not update project, ' + err.message,
+                                            });
+                                        } else {
+                                            if (project === null) {
+                                                res.status(500).send({
+                                                    error: 'Could not update project, project not found',
+                                                });
+                                            } else {
+                                                if (err) {
+                                                    res.status(500).send({
+                                                        error: 'Could not update project, ' + err.message,
+                                                    });
+                                                } else {
+                                                    project.timeStampISO = timeStampISO;
+                                                    project.save(function (err, savedProject) {
+                                                        if (err) {
+                                                            res.status(500).send({
+                                                                error: 'Could not save project, ' + err.message,
+                                                            });
+                                                        } else {
+                                                            res.status(200).send({
+                                                                userStory: savedUserStory,
+                                                                project: savedProject,
+                                                            });
+                                                        }
+                                                    });
+                                                }
+                                            }
+                                        }
+                                    }
+                                );
+                            }
+                        });
+                    }
+                }
+            }
+        }
+    );
+};
+
 module.exports = {
     post: post,
     postReturnUserStoryProject: postReturnUserStoryProject,
@@ -379,4 +458,5 @@ module.exports = {
     deleteUserStorys: deleteUserStorys,
     put: put,
     putReturnUserStoryProject: putReturnUserStoryProject,
+    putVoteReturnUserStoryProject: putVoteReturnUserStoryProject,
 };

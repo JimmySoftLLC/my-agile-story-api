@@ -16,7 +16,11 @@ var bugSchema = new Schema({
   percentDone: Number,
   priority: Number,
   sprint: Number,
-  projectId: { type: ObjectId, ref: 'Project' },
+  projectId: {
+    type: ObjectId,
+    ref: 'Project'
+  },
+  votes: [],
   timeStampISO: String,
 });
 

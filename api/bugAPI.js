@@ -1,7 +1,5 @@
 const mongoose = require('mongoose');
-let Developer = require('../model/developer');
 let Project = require('../model/project');
-var UserStory = require('../model/user-story');
 var Bug = require('../model/bug');
 let getTimeStamp = require('./getTimeStamp');
 
@@ -376,6 +374,87 @@ const putReturnBugProject = (req, res) => {
     );
 };
 
+const putVoteReturnBugProject = (req, res) => {
+    var timeStampISO = getTimeStamp();
+    Bug.findOne({
+            _id: req.body.bugId,
+        },
+        function (err, bug) {
+            if (err) {
+                res.status(500).send({
+                    error: 'Could not update user story, ' + err.message,
+                });
+            } else {
+                if (bug === null) {
+                    res.status(500).send({
+                        error: 'Could not update user story, user story not found',
+                    });
+                } else {
+                    if (err) {
+                        res.status(500).send({
+                            error: 'Could not update user story, ' + err.message,
+                        });
+                    } else {
+                        for (let i = 0; i < bug.votes.length; i++) {
+                            if (bug.votes[i].developerId === req.body.vote.developerId) {
+                                bug.votes.splice(i, 1)
+                                break;
+                            }
+                        }
+                        bug.votes.push(req.body.vote)
+                        bug.timeStampISO = timeStampISO;
+                        bug.save(function (err, savedBug) {
+                            if (err) {
+                                res.status(500).send({
+                                    error: 'Could not save user story, ' + err.message,
+                                });
+                            } else {
+                                Project.findOne({
+                                        _id: req.body.projectId,
+                                    },
+                                    function (err, project) {
+                                        if (err) {
+                                            res.status(500).send({
+                                                error: 'Could not update project, ' + err.message,
+                                            });
+                                        } else {
+                                            if (project === null) {
+                                                res.status(500).send({
+                                                    error: 'Could not update project, project not found',
+                                                });
+                                            } else {
+                                                if (err) {
+                                                    res.status(500).send({
+                                                        error: 'Could not update project, ' + err.message,
+                                                    });
+                                                } else {
+                                                    project.timeStampISO = timeStampISO;
+                                                    project.save(function (err, savedProject) {
+                                                        if (err) {
+                                                            res.status(500).send({
+                                                                error: 'Could not save project, ' + err.message,
+                                                            });
+                                                        } else {
+                                                            res.status(200).send({
+                                                                bug: savedBug,
+                                                                project: savedProject,
+                                                            });
+                                                        }
+                                                    });
+                                                }
+                                            }
+                                        }
+                                    }
+                                );
+                            }
+                        });
+                    }
+                }
+            }
+        }
+    );
+};
+
 module.exports = {
     post: post,
     get: get,
@@ -385,4 +464,5 @@ module.exports = {
     postReturnBugProject: postReturnBugProject,
     put: put,
     putReturnBugProject: putReturnBugProject,
+    putVoteReturnBugProject: putVoteReturnBugProject,
 };
