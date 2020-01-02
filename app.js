@@ -1,15 +1,3 @@
-// ==================================================================
-// SETUP
-//
-// A .env document is needed with the following parameters
-// NODE_ENVIRONMENT=production or development
-// PORT=****
-// MONGO_USER=****
-// MONGO_PASSWORD=****
-// JWT_SECRET=****
-// ==================================================================
-require('dotenv').config();
-
 const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
@@ -20,13 +8,14 @@ let project = require('./api/projectAPI');
 let userStory = require('./api/userStoryAPI');
 let bug = require('./api/bugAPI');
 let getTimeStamp = require('./api/getTimeStamp');
+let auth = require('./auth/auth')
 
 //Allow all reqs from all domains & localhost
 app.all('/*', function (req, res, next) {
   res.header('Access-Control-Allow-Origin', '*');
   res.header(
     'Access-Control-Allow-Headers',
-    'X-Requested-With, Content-Type, Accept'
+    'X-Requested-With, Content-Type, Accept, x-auth-token'
   );
   res.header('Access-Control-Allow-Methods', 'POST');
   next();
@@ -57,27 +46,27 @@ app.post('/developer', function (req, res) {
   developer.post(req, res);
 });
 
-app.post('/developer/project', function (req, res) {
+app.post('/developer/project', auth, function (req, res) {
   project.post(req, res);
 });
 
-app.post('/developer/project/returnProjectAndDeveloper', function (req, res) {
+app.post('/developer/project/returnProjectAndDeveloper', auth, function (req, res) {
   project.postReturnObjects(req, res);
 });
 
-app.post('/project/userStory', function (req, res) {
+app.post('/project/userStory', auth, function (req, res) {
   userStory.post(req, res);
 });
 
-app.post('/project/userStory/returnUserStoryAndProject', function (req, res) {
+app.post('/project/userStory/returnUserStoryAndProject', auth, function (req, res) {
   userStory.postReturnUserStoryProject(req, res);
 });
 
-app.post('/project/bug', function (req, res) {
+app.post('/project/bug', auth, function (req, res) {
   bug.post(req, res);
 });
 
-app.post('/project/bug/returnBugAndProject', function (req, res) {
+app.post('/project/bug/returnBugAndProject', auth, function (req, res) {
   bug.postReturnBugProject(req, res);
 });
 
@@ -87,7 +76,7 @@ app.post('/project/bug/returnBugAndProject', function (req, res) {
 // complex JSON based search parameters.  These routes have the form /get/...
 // ==================================================================
 
-app.get('/timestamp', function (req, res) {
+app.get('/timestamp', auth, function (req, res) {
   var timeStampISO = getTimeStamp();
   res.status(200).send(timeStampISO);
 });
@@ -96,27 +85,27 @@ app.post('/get/developer', function (req, res) {
   developer.get(req, res);
 });
 
-app.post('/get/project', function (req, res) {
+app.post('/get/project', auth, function (req, res) {
   project.get(req, res);
 });
 
-app.post('/get/projects', function (req, res) {
+app.post('/get/projects', auth, function (req, res) {
   project.getProjects(req, res);
 });
 
-app.post('/get/userStory', function (req, res) {
+app.post('/get/userStory', auth, function (req, res) {
   userStory.get(req, res);
 });
 
-app.post('/get/userStorys', function (req, res) {
+app.post('/get/userStorys', auth, function (req, res) {
   userStory.getUserStorys(req, res);
 });
 
-app.post('/get/bug', function (req, res) {
+app.post('/get/bug', auth, function (req, res) {
   bug.get(req, res);
 });
 
-app.post('/get/bugs', function (req, res) {
+app.post('/get/bugs', auth, function (req, res) {
   bug.getBugs(req, res);
 });
 
@@ -124,27 +113,27 @@ app.post('/get/bugs', function (req, res) {
 // DELETE ROUTES
 // ==================================================================
 
-app.post('/developer', function (req, res) {
+app.post('/developer', auth, function (req, res) {
   developer.delete(req, res);
 });
 
-app.post('/delete/developer/project', function (req, res) {
+app.post('/delete/developer/project', auth, function (req, res) {
   project.delete(req, res);
 });
 
-app.post('/delete/project/userStory', function (req, res) {
+app.post('/delete/project/userStory', auth, function (req, res) {
   userStory.delete(req, res);
 });
 
-app.post('/delete/project/userStorys', function (req, res) {
+app.post('/delete/project/userStorys', auth, function (req, res) {
   userStory.deleteUserStorys(req, res);
 });
 
-app.post('/delete/project/bug', function (req, res) {
+app.post('/delete/project/bug', auth, function (req, res) {
   bug.delete(req, res);
 });
 
-app.post('/delete/project/bugs', function (req, res) {
+app.post('/delete/project/bugs', auth, function (req, res) {
   bug.deleteBugs(req, res);
 });
 
@@ -152,43 +141,43 @@ app.post('/delete/project/bugs', function (req, res) {
 // PUT ROUTES
 // ==================================================================
 
-app.post('/put/developer', function (req, res) {
+app.post('/put/developer', auth, function (req, res) {
   developer.put(req, res);
 });
 
-app.post('/put/developer/changePassword', function (req, res) {
+app.post('/put/developer/changePassword', auth, function (req, res) {
   developer.changePassword(req, res);
 });
 
-app.post('/put/project', function (req, res) {
+app.post('/put/project', auth, function (req, res) {
   project.put(req, res);
 });
 
-app.post('/put/project/returnProjectAndDeveloper', function (req, res) {
+app.post('/put/project/returnProjectAndDeveloper', auth, function (req, res) {
   project.putReturnProjectDeveloper(req, res);
 });
 
-app.post('/put/userStory', function (req, res) {
+app.post('/put/userStory', auth, function (req, res) {
   userStory.put(req, res);
 });
 
-app.post('/put/userStory/returnUserStoryAndProject', function (req, res) {
+app.post('/put/userStory/returnUserStoryAndProject', auth, function (req, res) {
   userStory.putReturnUserStoryProject(req, res);
 });
 
-app.post('/put/userStory/voteReturnUserStoryProject', function (req, res) {
+app.post('/put/userStory/voteReturnUserStoryProject', auth, function (req, res) {
   userStory.putVoteReturnUserStoryProject(req, res);
 });
 
-app.post('/put/bug', function (req, res) {
+app.post('/put/bug', auth, function (req, res) {
   bug.put(req, res);
 });
 
-app.post('/put/bug/returnBugAndProject', function (req, res) {
+app.post('/put/bug/returnBugAndProject', auth, function (req, res) {
   bug.putReturnBugProject(req, res);
 });
 
-app.post('/put/bug/voteReturnBugProject', function (req, res) {
+app.post('/put/bug/voteReturnBugProject', auth, function (req, res) {
   bug.putVoteReturnBugProject(req, res);
 });
 
@@ -196,25 +185,25 @@ app.post('/put/bug/voteReturnBugProject', function (req, res) {
 // NO ROUTES FOUND
 // ==================================================================
 
-app.post('*', function (req, res) {
+app.post('*', auth, function (req, res) {
   res.status(500).send({
     error: 'That route does not exist',
   });
 });
 
-app.get('*', function (req, res) {
+app.get('*', auth, function (req, res) {
   res.status(500).send({
     error: 'That route does not exist',
   });
 });
 
-app.delete('*', function (req, res) {
+app.delete('*', auth, function (req, res) {
   res.status(500).send({
     error: 'That route does not exist',
   });
 });
 
-app.put('*', function (req, res) {
+app.put('*', auth, function (req, res) {
   res.status(500).send({
     error: 'That route does not exist',
   });

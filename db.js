@@ -1,8 +1,18 @@
 // ==================================================================
-// DATABASE
+// SETUP
+//
+// A .env document is needed with the following parameters
+// NODE_ENVIRONMENT=production or development
+// PORT=****
+// MONGO_USER=****
+// MONGO_PASSWORD=****
+// JWT_SECRET=****
 // ==================================================================
 require('dotenv').config();
 
+// ==================================================================
+// DATABASE
+// ==================================================================
 module.exports = function (mongoose) {
     if (process.env.NODE_ENVIRONMENT === 'production') {
         const db = mongoose

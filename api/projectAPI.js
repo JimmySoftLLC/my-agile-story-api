@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 let Developer = require('../model/developer');
 let Project = require('../model/project');
 let getTimeStamp = require('./getTimeStamp');
+const auth = require("../auth/auth");
 
 const post = (req, res) => {
     var timeStampISO = getTimeStamp();

@@ -7,7 +7,7 @@ var fs = require('fs');
 
 notAllowed = [];
 
-fs.readFile('bannedwords.txt', 'utf8', function(err, data) {
+fs.readFile('bannedwords.txt', 'utf8', function (err, data) {
   if (err) throw err;
   let mystring = data.split('\n');
   for (let i = 0; i < mystring.length; i++) {
@@ -60,9 +60,11 @@ module.exports = function validateInputs(req) {
     validationResult.message = 'This is not a valid email address.';
   }
 
-  if (containsBlackListedStuff(req.body.password, validationResult)) {
-    validationResult.pass = false;
-    validationResult.message = 'This is not a valid password.';
+  if (req.body.password) {
+    if (containsBlackListedStuff(req.body.password, validationResult)) {
+      validationResult.pass = false;
+      validationResult.message = 'This is not a valid password.';
+    }
   }
 
   if (req.body.oldPassword) {

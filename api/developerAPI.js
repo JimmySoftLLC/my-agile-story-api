@@ -1,7 +1,21 @@
+// ==================================================================
+// SETUP
+//
+// A .env document is needed with the following parameters
+// NODE_ENVIRONMENT=production or development
+// PORT=****
+// MONGO_USER=****
+// MONGO_PASSWORD=****
+// JWT_SECRET=****
+// ==================================================================
+require('dotenv').config();
+
 const bcrypt = require('bcrypt');
 let validateInputs = require('../auth/validateInputs');
 let Developer = require('../model/developer');
 let getTimeStamp = require('./getTimeStamp');
+var jwt = require('jsonwebtoken');
+
 
 const post = (req, res) => {
     const validationResult = validateInputs(req);
@@ -61,7 +75,6 @@ const post = (req, res) => {
 }
 
 const get = (req, res) => {
-    //hashPassword(req.body.password);
     Developer.findOne({
             email: req.body.email,
         },
@@ -86,8 +99,26 @@ const get = (req, res) => {
                             });
                         } else {
                             if (resBcrypt) {
-                                developer.password = '';
-                                res.status(200).send(developer);
+                                const payload = {
+                                    user: {
+                                        id: developer._id,
+                                    }
+                                }
+                                jwt.sign(payload, process.env.JWT_SECRET, {
+                                    expiresIn: 86400
+                                }, (err, token) => {
+                                    if (err) {
+                                        res.status(500).send({
+                                            error: 'token error' + err.message,
+                                        });
+                                    } else {
+                                        developer.password = '';
+                                        res.status(200).send({
+                                            token,
+                                            developer
+                                        });
+                                    }
+                                });
                             } else {
                                 res.status(500).send({
                                     error: 'Could not get developer',
@@ -152,48 +183,34 @@ const put = (req, res) => {
                                 error: 'Could not update developer, ' + err.message,
                             });
                         } else {
-                            bcrypt.compare(req.body.password, developer.password, function (
-                                err,
-                                resBcrypt
-                            ) {
+                            if (err) {
+                                res.status(500).send({
+                                    error: 'Could not update developer' + err.message,
+                                });
+                            } else {
                                 if (err) {
                                     res.status(500).send({
-                                        error: 'Could not update developer' + err.message,
+                                        error: 'Could not update developer, ' + err.message,
                                     });
                                 } else {
-                                    if (resBcrypt) {
-                                        bcrypt.hash(req.body.password, 10, function (err, hash) {
-                                            if (err) {
-                                                res.status(500).send({
-                                                    error: 'Could not update developer, ' + err.message,
-                                                });
-                                            } else {
-                                                developer.firstName = req.body.firstName;
-                                                developer.lastName = req.body.lastName;
-                                                developer.email = req.body.email;
-                                                developer.password = hash;
-                                                developer.bio = req.body.bio;
-                                                developer.role = req.body.role;
-                                                developer.timeStampISO = timeStampISO;
-                                                developer.save(function (err, savedDeveloper) {
-                                                    if (err) {
-                                                        res.status(500).send({
-                                                            error: 'Could not update developer, ' + err.message,
-                                                        });
-                                                    } else {
-                                                        savedDeveloper.password = '';
-                                                        res.status(200).send(savedDeveloper);
-                                                    }
-                                                });
-                                            }
-                                        });
-                                    } else {
-                                        res.status(500).send({
-                                            error: 'Could not update developer password incorrect',
-                                        });
-                                    }
+                                    developer.firstName = req.body.firstName;
+                                    developer.lastName = req.body.lastName;
+                                    developer.email = req.body.email;
+                                    developer.bio = req.body.bio;
+                                    developer.role = req.body.role;
+                                    developer.timeStampISO = timeStampISO;
+                                    developer.save(function (err, savedDeveloper) {
+                                        if (err) {
+                                            res.status(500).send({
+                                                error: 'Could not update developer, ' + err.message,
+                                            });
+                                        } else {
+                                            savedDeveloper.password = '';
+                                            res.status(200).send(savedDeveloper);
+                                        }
+                                    });
                                 }
-                            });
+                            }
                         }
                     }
                 }
