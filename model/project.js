@@ -5,9 +5,15 @@ var ObjectId = mongoose.Schema.Types.ObjectId;
 var projectSchema = new Schema({
   name: String,
   description: String,
-  developerIds: [{ type: ObjectId, ref: 'Developer' }],
-  userStoryIds: [{ type: ObjectId, ref: 'UserStory' }],
-  bugIds: [{ type: ObjectId, ref: 'BugStory' }],
+  userStoryIds: [{
+    type: ObjectId,
+    ref: 'UserStory'
+  }],
+  bugIds: [{
+    type: ObjectId,
+    ref: 'BugStory'
+  }],
+  developers: [],
   timeStampISO: String,
 });
 

@@ -291,10 +291,45 @@ const changePassword = (req, res) => {
     }
 };
 
+const getDeveloperByEmail = (req, res) => {
+    Developer.findOne({
+            email: req.body.developerEmail,
+        },
+        function (err, developer) {
+            if (err) {
+                res.status(500).send({
+                    error: 'Could not get developer, ' + err.message,
+                });
+            } else {
+                if (developer === null) {
+                    res.status(500).send({
+                        error: 'Could not get developer, not found',
+                    });
+                } else {
+                    var timeStampISO = getTimeStamp();
+                    developer.timeStampISO = timeStampISO;
+                    developer.projectIds.push(req.body.projectId);
+                    developer.save(function (err, savedDeveloper) {
+                        if (err) {
+                            res.status(500).send({
+                                error: 'Could not update developer, ' + err.message,
+                            });
+                        } else {
+                            savedDeveloper.password = '';
+                            res.status(200).send(savedDeveloper);
+                        }
+                    });
+                }
+            }
+        }
+    );
+};
+
 module.exports = {
     post: post,
     get: get,
     delete: del,
     put: put,
+    getDeveloperByEmail: getDeveloperByEmail,
     changePassword: changePassword,
 };

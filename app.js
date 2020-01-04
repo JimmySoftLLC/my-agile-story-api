@@ -85,6 +85,10 @@ app.post('/get/developer', function (req, res) {
   developer.get(req, res);
 });
 
+app.post('/get/developer/byEmail', auth, function (req, res) {
+  developer.getDeveloperByEmail(req, res);
+});
+
 app.post('/get/project', auth, function (req, res) {
   project.get(req, res);
 });

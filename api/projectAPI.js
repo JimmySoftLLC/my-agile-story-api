@@ -21,9 +21,17 @@ const post = (req, res) => {
                     });
                 } else {
                     var project = new Project();
+                    var developer = {};
                     project.name = req.body.name;
                     project.description = req.body.description;
-                    project.developerIds.push(developer._id);
+                    project.developers.push({
+                        developerId: developer._id,
+                        canRead: true,
+                        canWrite: true,
+                        firstName: developer.firstName,
+                        lastName: developer.lastName,
+                        email: developer.email,
+                    });
                     project.timeStampISO = timeStampISO;
                     project.save(function (err, savedProject) {
                         if (err) {
@@ -91,7 +99,15 @@ const postReturnProjectDeveloper = (req, res) => {
                     var project = new Project();
                     project.name = req.body.name;
                     project.description = req.body.description;
-                    project.developerIds.push(developer._id);
+                    project.developers.push({
+                        developerId: developer._id,
+                        canRead: true,
+                        canWrite: true,
+                        canAdmin: true,
+                        firstName: developer.firstName,
+                        lastName: developer.lastName,
+                        email: developer.email,
+                    });
                     project.timeStampISO = timeStampISO;
                     project.save(function (err, savedProject) {
                         if (err) {
@@ -107,6 +123,7 @@ const postReturnProjectDeveloper = (req, res) => {
                                         error: 'Could not save developer, ' + err.message,
                                     });
                                 } else {
+                                    savedDeveloper.password = '';
                                     res.status(200).send({
                                         project: savedProject,
                                         developer: savedDeveloper,
@@ -121,26 +138,69 @@ const postReturnProjectDeveloper = (req, res) => {
     );
 };
 
-const del = (req, res) => {
+// const del = (req, res) => {
+//     var timeStampISO = getTimeStamp();
+//     Project.findOneAndDelete({
+//             _id: req.body.projectId,
+//         },
+//         function (err, project) {
+//             if (err) {
+//                 res.status(500).send({
+//                     error: 'Could not delete project, ' + err.message,
+//                 });
+//             } else {
+//                 if (project === null) {
+//                     res.status(500).send({
+//                         error: 'Could not delete project, not found',
+//                     });
+//                 } else {
+//                     Developer.findByIdAndUpdate(
+//                         req.body.developerId, {
+//                             $pull: {
+//                                 projectIds: mongoose.Types.ObjectId(req.body.projectId),
+//                             },
+//                             $set: {
+//                                 timeStampISO: timeStampISO,
+//                             },
+//                         }, {
+//                             new: true,
+//                             safe: true,
+//                             upsert: true,
+//                         },
+//                         function (err, SavedDeveloper) {
+//                             if (err) {
+//                                 res.status(500).send({
+//                                     error: 'Could not remove project from developer',
+//                                 });
+//                             } else {
+//                                 res.status(200).send(SavedDeveloper);
+//                             }
+//                         }
+//                     );
+//                 }
+//             }
+//         }
+//     );
+// };
+
+const del = async (req, res) => {
     var timeStampISO = getTimeStamp();
-    Project.findOneAndDelete({
-            _id: req.body.projectId,
-        },
-        function (err, project) {
-            if (err) {
-                res.status(500).send({
-                    error: 'Could not delete project, ' + err.message,
-                });
-            } else {
-                if (project === null) {
-                    res.status(500).send({
-                        error: 'Could not delete project, not found',
-                    });
-                } else {
-                    Developer.findByIdAndUpdate(
-                        req.body.developerId, {
+    try {
+        const project = await Project.findOneAndDelete({
+            _id: req.body.project._id,
+        });
+        if (project === null) {
+            res.status(500).send({
+                error: 'Could not delete project, not found',
+            });
+        } else {
+            try {
+                let mySaveDevelopers = [];
+                for (let i = 0; i < req.body.project.developers.length; i++) {
+                    const savedDeveloper = await Developer.findByIdAndUpdate(
+                        req.body.project.developers[i].developerId, {
                             $pull: {
-                                projectIds: mongoose.Types.ObjectId(req.body.projectId),
+                                projectIds: mongoose.Types.ObjectId(req.body.project._id),
                             },
                             $set: {
                                 timeStampISO: timeStampISO,
@@ -149,21 +209,21 @@ const del = (req, res) => {
                             new: true,
                             safe: true,
                             upsert: true,
-                        },
-                        function (err, SavedDeveloper) {
-                            if (err) {
-                                res.status(500).send({
-                                    error: 'Could not remove project from developer',
-                                });
-                            } else {
-                                res.status(200).send(SavedDeveloper);
-                            }
-                        }
-                    );
+                        }, );
+                    mySaveDevelopers.push(savedDeveloper)
                 }
+                res.status(200).send(mySaveDevelopers);
+            } catch (error) {
+                res.status(500).send({
+                    error: 'Could not remove project from developer, ' + error.message,
+                });
             }
         }
-    );
+    } catch (error) {
+        res.status(500).send({
+            error: 'Could not delete project, ' + error.message,
+        });
+    }
 };
 
 const getProjects = (req, res) => {
@@ -253,6 +313,7 @@ const putReturnProjectDeveloper = (req, res) => {
                     } else {
                         project.name = req.body.name;
                         project.description = req.body.description;
+                        project.developers = req.body.developers;
                         project.timeStampISO = timeStampISO;
                         project.save(function (err, savedProject) {
                             if (err) {
@@ -286,6 +347,7 @@ const putReturnProjectDeveloper = (req, res) => {
                                                                 error: 'Could not save developer, ' + err.message,
                                                             });
                                                         } else {
+                                                            savedDeveloper.password = '';
                                                             res.status(200).send({
                                                                 project: savedProject,
                                                                 developer: savedDeveloper,
