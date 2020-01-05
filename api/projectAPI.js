@@ -26,8 +26,8 @@ const post = (req, res) => {
                     project.description = req.body.description;
                     project.developers.push({
                         developerId: developer._id,
-                        canRead: true,
                         canWrite: true,
+                        canAdmin: true,
                         firstName: developer.firstName,
                         lastName: developer.lastName,
                         email: developer.email,
@@ -101,7 +101,6 @@ const postReturnProjectDeveloper = (req, res) => {
                     project.description = req.body.description;
                     project.developers.push({
                         developerId: developer._id,
-                        canRead: true,
                         canWrite: true,
                         canAdmin: true,
                         firstName: developer.firstName,
@@ -137,51 +136,6 @@ const postReturnProjectDeveloper = (req, res) => {
         }
     );
 };
-
-// const del = (req, res) => {
-//     var timeStampISO = getTimeStamp();
-//     Project.findOneAndDelete({
-//             _id: req.body.projectId,
-//         },
-//         function (err, project) {
-//             if (err) {
-//                 res.status(500).send({
-//                     error: 'Could not delete project, ' + err.message,
-//                 });
-//             } else {
-//                 if (project === null) {
-//                     res.status(500).send({
-//                         error: 'Could not delete project, not found',
-//                     });
-//                 } else {
-//                     Developer.findByIdAndUpdate(
-//                         req.body.developerId, {
-//                             $pull: {
-//                                 projectIds: mongoose.Types.ObjectId(req.body.projectId),
-//                             },
-//                             $set: {
-//                                 timeStampISO: timeStampISO,
-//                             },
-//                         }, {
-//                             new: true,
-//                             safe: true,
-//                             upsert: true,
-//                         },
-//                         function (err, SavedDeveloper) {
-//                             if (err) {
-//                                 res.status(500).send({
-//                                     error: 'Could not remove project from developer',
-//                                 });
-//                             } else {
-//                                 res.status(200).send(SavedDeveloper);
-//                             }
-//                         }
-//                     );
-//                 }
-//             }
-//         }
-//     );
-// };
 
 const del = async (req, res) => {
     var timeStampISO = getTimeStamp();

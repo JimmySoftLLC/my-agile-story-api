@@ -306,23 +306,91 @@ const getDeveloperByEmail = (req, res) => {
                         error: 'Could not get developer, not found',
                     });
                 } else {
-                    var timeStampISO = getTimeStamp();
-                    developer.timeStampISO = timeStampISO;
-                    developer.projectIds.push(req.body.projectId);
-                    developer.save(function (err, savedDeveloper) {
-                        if (err) {
-                            res.status(500).send({
-                                error: 'Could not update developer, ' + err.message,
-                            });
-                        } else {
-                            savedDeveloper.password = '';
-                            res.status(200).send(savedDeveloper);
-                        }
-                    });
+                    developer.password = '';
+                    res.status(200).send(developer);
                 }
             }
         }
     );
+};
+
+const addDeveloperByEmail = async (req, res) => {
+    var timeStampISO = getTimeStamp();
+    try {
+        let mySaveDevelopers = [];
+        for (let i = 0; i < req.body.developerEmails.length; i++) {
+            const developer = await Developer.findOne({
+                email: req.body.developerEmails[i],
+            });
+            if (developer === null) {
+                res.status(500).send({
+                    error: 'Could not get developer, not found',
+                });
+            } else {
+                var timeStampISO = getTimeStamp();
+                developer.timeStampISO = timeStampISO;
+                for (let j = developer.projectIds.length; j > -1; j--) {
+                    if (developer.projectIds[j] == req.body.projectId) {
+                        developer.projectIds.splice(j, 1);
+                    }
+                }
+                developer.projectIds.push(req.body.projectId);
+                try {
+                    const savedDeveloper = await developer.save();
+                    savedDeveloper.password = '';
+                    mySaveDevelopers.push(savedDeveloper)
+                } catch (error) {
+                    res.status(500).send({
+                        error: 'Could not update developer, ' + error.message,
+                    });
+                }
+            }
+        }
+        res.status(200).send(mySaveDevelopers);
+    } catch (error) {
+        res.status(500).send({
+            error: 'Could not get developer, ' + error.message,
+        });
+    }
+};
+
+const removeDeveloperByEmail = async (req, res) => {
+    var timeStampISO = getTimeStamp();
+    try {
+        let mySaveDevelopers = [];
+        for (let i = 0; i < req.body.developerEmails.length; i++) {
+            const developer = await Developer.findOne({
+                email: req.body.developerEmails[i],
+            });
+            if (developer === null) {
+                res.status(500).send({
+                    error: 'Could not get developer, not found',
+                });
+            } else {
+                var timeStampISO = getTimeStamp();
+                developer.timeStampISO = timeStampISO;
+                for (let j = developer.projectIds.length; j > -1; j--) {
+                    if (developer.projectIds[j] == req.body.projectId) {
+                        developer.projectIds.splice(j, 1);
+                    }
+                }
+                try {
+                    const savedDeveloper = await developer.save();
+                    savedDeveloper.password = '';
+                    mySaveDevelopers.push(savedDeveloper)
+                } catch (error) {
+                    res.status(500).send({
+                        error: 'Could not update developer, ' + error.message,
+                    });
+                }
+            }
+        }
+        res.status(200).send(mySaveDevelopers);
+    } catch (error) {
+        res.status(500).send({
+            error: 'Could not get developer, ' + error.message,
+        });
+    }
 };
 
 module.exports = {
@@ -332,4 +400,6 @@ module.exports = {
     put: put,
     getDeveloperByEmail: getDeveloperByEmail,
     changePassword: changePassword,
+    addDeveloperByEmail: addDeveloperByEmail,
+    removeDeveloperByEmail: removeDeveloperByEmail,
 };

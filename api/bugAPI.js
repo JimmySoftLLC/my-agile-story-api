@@ -455,6 +455,81 @@ const putVoteReturnBugProject = (req, res) => {
     );
 };
 
+const delVotesReturnBugProject = (req, res) => {
+    var timeStampISO = getTimeStamp();
+    Bug.findOne({
+            _id: req.body.bugId,
+        },
+        function (err, bug) {
+            if (err) {
+                res.status(500).send({
+                    error: 'Could not update user story, ' + err.message,
+                });
+            } else {
+                if (bug === null) {
+                    res.status(500).send({
+                        error: 'Could not update user story, user story not found',
+                    });
+                } else {
+                    if (err) {
+                        res.status(500).send({
+                            error: 'Could not update user story, ' + err.message,
+                        });
+                    } else {
+                        bug.votes = [];
+                        bug.timeStampISO = timeStampISO;
+                        bug.save(function (err, savedBug) {
+                            if (err) {
+                                res.status(500).send({
+                                    error: 'Could not save user story, ' + err.message,
+                                });
+                            } else {
+                                Project.findOne({
+                                        _id: req.body.projectId,
+                                    },
+                                    function (err, project) {
+                                        if (err) {
+                                            res.status(500).send({
+                                                error: 'Could not update project, ' + err.message,
+                                            });
+                                        } else {
+                                            if (project === null) {
+                                                res.status(500).send({
+                                                    error: 'Could not update project, project not found',
+                                                });
+                                            } else {
+                                                if (err) {
+                                                    res.status(500).send({
+                                                        error: 'Could not update project, ' + err.message,
+                                                    });
+                                                } else {
+                                                    project.timeStampISO = timeStampISO;
+                                                    project.save(function (err, savedProject) {
+                                                        if (err) {
+                                                            res.status(500).send({
+                                                                error: 'Could not save project, ' + err.message,
+                                                            });
+                                                        } else {
+                                                            res.status(200).send({
+                                                                bug: savedBug,
+                                                                project: savedProject,
+                                                            });
+                                                        }
+                                                    });
+                                                }
+                                            }
+                                        }
+                                    }
+                                );
+                            }
+                        });
+                    }
+                }
+            }
+        }
+    );
+};
+
 module.exports = {
     post: post,
     get: get,
@@ -465,4 +540,5 @@ module.exports = {
     put: put,
     putReturnBugProject: putReturnBugProject,
     putVoteReturnBugProject: putVoteReturnBugProject,
+    delVotesReturnBugProject: delVotesReturnBugProject,
 };

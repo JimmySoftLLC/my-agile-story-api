@@ -125,6 +125,10 @@ app.post('/delete/developer/project', auth, function (req, res) {
   project.delete(req, res);
 });
 
+app.post('/delete/developer/byEmail', auth, function (req, res) {
+  developer.removeDeveloperByEmail(req, res);
+});
+
 app.post('/delete/project/userStory', auth, function (req, res) {
   userStory.delete(req, res);
 });
@@ -141,6 +145,14 @@ app.post('/delete/project/bugs', auth, function (req, res) {
   bug.deleteBugs(req, res);
 });
 
+app.post('/delete/userStory/votes', auth, function (req, res) {
+  userStory.delVotesReturnUserStoryProject(req, res);
+});
+
+app.post('/delete/bug/votes', auth, function (req, res) {
+  bug.delVotesReturnBugProject(req, res);
+});
+
 // ==================================================================
 // PUT ROUTES
 // ==================================================================
@@ -151,6 +163,10 @@ app.post('/put/developer', auth, function (req, res) {
 
 app.post('/put/developer/changePassword', auth, function (req, res) {
   developer.changePassword(req, res);
+});
+
+app.post('/put/developer/byEmail', auth, function (req, res) {
+  developer.addDeveloperByEmail(req, res);
 });
 
 app.post('/put/project', auth, function (req, res) {
