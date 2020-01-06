@@ -291,31 +291,27 @@ const changePassword = (req, res) => {
     }
 };
 
-const getDeveloperByEmail = (req, res) => {
-    Developer.findOne({
+const getDeveloperByEmail = async (req, res) => {
+    try {
+        const developer = await Developer.findOne({
             email: req.body.developerEmail,
-        },
-        function (err, developer) {
-            if (err) {
-                res.status(500).send({
-                    error: 'Could not get developer, ' + err.message,
-                });
-            } else {
-                if (developer === null) {
-                    res.status(500).send({
-                        error: 'Could not get developer, not found',
-                    });
-                } else {
-                    developer.password = '';
-                    res.status(200).send(developer);
-                }
-            }
+        })
+        if (developer === null) {
+            res.status(500).send({
+                error: 'Could not get developer, not found',
+            });
+        } else {
+            developer.password = '';
+            res.status(200).send(developer);
         }
-    );
-};
+    } catch (error) {
+        res.status(500).send({
+            error: 'Could not get developer, ' + error.message,
+        });
+    }
+}
 
 const addDeveloperByEmail = async (req, res) => {
-    var timeStampISO = getTimeStamp();
     try {
         let mySaveDevelopers = [];
         for (let i = 0; i < req.body.developerEmails.length; i++) {
@@ -355,7 +351,6 @@ const addDeveloperByEmail = async (req, res) => {
 };
 
 const removeDeveloperByEmail = async (req, res) => {
-    var timeStampISO = getTimeStamp();
     try {
         let mySaveDevelopers = [];
         for (let i = 0; i < req.body.developerEmails.length; i++) {
@@ -393,6 +388,64 @@ const removeDeveloperByEmail = async (req, res) => {
     }
 };
 
+const getDemoUser = (req, res) => {
+    Developer.findOne({
+            email: process.env.DEMO_USER,
+        },
+        function (err, developer) {
+            if (err) {
+                res.status(500).send({
+                    error: 'Could not get developer, ' + err.message,
+                });
+            } else {
+                if (developer === null) {
+                    res.status(500).send({
+                        error: 'Could not get developer, not found',
+                    });
+                } else {
+                    bcrypt.compare(process.env.DEMO_PASSWORD, developer.password, function (
+                        err,
+                        resBcrypt
+                    ) {
+                        if (err) {
+                            res.status(500).send({
+                                error: 'Could not get developer' + err.message,
+                            });
+                        } else {
+                            if (resBcrypt) {
+                                const payload = {
+                                    user: {
+                                        id: developer._id,
+                                    }
+                                }
+                                jwt.sign(payload, process.env.JWT_SECRET, {
+                                    expiresIn: 1800
+                                }, (err, token) => {
+                                    if (err) {
+                                        res.status(500).send({
+                                            error: 'token error' + err.message,
+                                        });
+                                    } else {
+                                        developer.password = '';
+                                        res.status(200).send({
+                                            token,
+                                            developer
+                                        });
+                                    }
+                                });
+                            } else {
+                                res.status(500).send({
+                                    error: 'Could not get developer',
+                                });
+                            }
+                        }
+                    });
+                }
+            }
+        }
+    );
+}
+
 module.exports = {
     post: post,
     get: get,
@@ -402,4 +455,5 @@ module.exports = {
     changePassword: changePassword,
     addDeveloperByEmail: addDeveloperByEmail,
     removeDeveloperByEmail: removeDeveloperByEmail,
+    getDemoUser: getDemoUser,
 };
