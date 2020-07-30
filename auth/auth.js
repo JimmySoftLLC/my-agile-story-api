@@ -7,6 +7,8 @@
 // MONGO_USER=****
 // MONGO_PASSWORD=****
 // JWT_SECRET=****
+// DEMO_USER=****
+// DEMO_PASSWORD=****
 // ==================================================================
 require('dotenv').config();
 const jwt = require('jsonwebtoken');

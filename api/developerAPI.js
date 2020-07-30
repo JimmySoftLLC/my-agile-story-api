@@ -16,7 +16,6 @@ let Developer = require('../model/developer');
 let getTimeStamp = require('./getTimeStamp');
 var jwt = require('jsonwebtoken');
 
-
 const post = (req, res) => {
     const validationResult = validateInputs(req);
     if (!validationResult.pass) {
