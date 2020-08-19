@@ -18,9 +18,10 @@ var bugSchema = new Schema({
   sprint: Number,
   projectId: {
     type: ObjectId,
-    ref: 'Project'
+    ref: 'Project',
   },
   votes: [],
+  developers: [],
   timeStampISO: String,
 });
 
