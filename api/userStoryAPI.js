@@ -217,7 +217,6 @@ const del = (req, res) => {
 };
 
 const deleteUserStorys = (req, res) => {
-  var timeStampISO = getTimeStamp();
   UserStory.deleteMany(
     {
       _id: {
