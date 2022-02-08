@@ -21,7 +21,7 @@
     "node": "^12.14.0",
     "nodemon": "^1.19.4",
     "request": "^2.88.0",
-    "validator": "^12.1.0"
+    "validator": "^13.7.0"
   },
   "devDependencies": {}
 }
