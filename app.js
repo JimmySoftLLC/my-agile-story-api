@@ -9,6 +9,7 @@ let userStory = require('./api/userStoryAPI');
 let bug = require('./api/bugAPI');
 let getTimeStamp = require('./api/getTimeStamp');
 let auth = require('./auth/auth')
+let cors = require('cors')
 
 //Allow all reqs from all domains & localhost
 app.all('/*', function (req, res, next) {
@@ -28,6 +29,7 @@ app.use(
   })
 );
 app.use(express.static('public'));
+app.use(cors());
 app.set('view engine', 'ejs');
 
 mongoose.set('useFindAndModify', false);
